@@ -1,0 +1,271 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Clinical Appeal Review System</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #f4f4f4;
+            margin: 0;
+            padding: 0;
+            display: flex;
+            height: 100vh;
+            overflow: hidden;
+        }
+        .sidebar {
+            width: 250px;
+            background-color: #4b67a3;
+            color: white;
+            position: fixed;
+            top: 0;
+            left: 0;
+            height: 100%;
+            padding: 20px;
+            overflow-y: auto;
+            transition: transform 0.3s ease, width 0.3s ease;
+            z-index: 1000;
+            display: flex;
+            flex-direction: column;
+        }
+        .sidebar h2 {
+            font-size: 20px;
+            margin-bottom: 20px;
+        }
+        .sidebar ul {
+            list-style-type: none;
+            padding: 0;
+            flex-grow: 1;
+        }
+        .sidebar ul li {
+            margin: 15px 0;
+        }
+        .sidebar ul li a {
+            color: white;
+            text-decoration: none;
+            display: block;
+        }
+        .hamburger {
+            font-size: 30px;
+            cursor: pointer;
+            margin-bottom: 20px;
+        }
+        .main-content {
+            margin-left: 250px;
+            padding: 0;
+            width: calc(100% - 250px);
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+            transition: margin-left 0.3s ease, width 0.3s ease;
+        }
+        .header {
+            background-color: #eef1f7;
+            padding: 15px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-bottom: 2px solid #ccc;
+            position: sticky;
+            top: 0;
+            z-index: 1001;
+            width: 100%;
+            box-sizing: border-box;
+        }
+        .header .title {
+            font-size: 24px;
+            color: #333;
+        }
+        .header .buttons {
+            display: flex;
+            gap: 10px;
+        }
+        .header button {
+            padding: 10px 20px;
+            background-color: #007bff;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+        }
+        .content-area {
+            padding: 20px;
+            overflow-y: auto;
+            flex: 1;
+        }
+        .alert {
+            background-color: #ffcccc;
+            padding: 15px;
+            margin-top: 20px;
+            border-radius: 5px;
+            text-align: center;
+        }
+        .dashboard-overview {
+            margin-top: 20px;
+        }
+        .dashboard-overview h3 {
+            font-size: 22px;
+            margin-bottom: 10px;
+        }
+        .summary {
+            display: flex;
+            gap: 15px;
+            flex-wrap: wrap;
+        }
+        .summary div {
+            background-color: white;
+            padding: 15px;
+            border-radius: 5px;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+            flex: 1 1 30%;
+            text-align: center;
+        }
+        .summary div h4 {
+            margin: 0;
+            font-size: 18px;
+        }
+        .adoption-trend {
+            margin-top: 20px;
+            background-color: white;
+            padding: 20px;
+            border-radius: 5px;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+        }
+        .adoption-trend h4 {
+            margin-bottom: 10px;
+            font-size: 18px;
+        }
+        .additional-content {
+            margin-top: 20px;
+        }
+        .additional-content .section {
+            background-color: white;
+            padding: 20px;
+            border-radius: 5px;
+            margin-bottom: 20px;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+        }
+        .additional-content .section h4 {
+            margin-bottom: 10px;
+            font-size: 18px;
+        }
+
+        /* Responsive styles */
+        @media (max-width: 768px) {
+            .main-content {
+                margin-left: 0;
+                width: 100%;
+            }
+        }
+
+        @media (max-width: 480px) {
+            .header .title {
+                font-size: 18px;
+            }
+            .header button {
+                padding: 8px 15px;
+            }
+            .summary div {
+                padding: 10px;
+            }
+            .adoption-trend, .additional-content .section {
+                padding: 15px;
+            }
+        }
+    </style>
+</head>
+<body>
+
+<div class="sidebar" id="sidebar">
+    <div class="hamburger" id="hamburger">&#9776;</div>
+    <h2>Clinical Appeal Review System</h2>
+    <ul>
+        <li><a href="#">Dashboard</a></li>
+        <li><a href="#">Search Case</a></li>
+        <li><a href="#">Case Inventory</a></li>
+        <li><a href="#">Template Master</a></li>
+        <li><a href="#">Drafts</a></li>
+        <li><a href="#">History</a></li>
+        <li><a href="#">Setting</a></li>
+        <li><a href="#">Help</a></li>
+    </ul>
+</div>
+
+<div class="main-content" id="main-content">
+    <div class="header">
+        <div class="title">Physician Assistant</div>
+        <div class="buttons">
+            <button>Full Screen</button>
+            <button>Auto Refresh</button>
+        </div>
+    </div>
+
+    <div class="content-area">
+        <div class="alert">
+            <strong>Hey!</strong> You have <strong>2 new cases</strong> to review in your bucket today! <a href="#">Just one click</a> to view the details 😊
+        </div>
+
+        <div class="dashboard-overview">
+            <h3>Dashboard Overview</h3>
+            <div class="summary">
+                <div>
+                    <h4>No of case Assigned</h4>
+                    <p>20</p>
+                </div>
+                <div>
+                    <h4>No of cases routed to MD</h4>
+                    <p>05</p>
+                </div>
+                <div>
+                    <h4>Total no of case in Inventory</h4>
+                    <p>14</p>
+                </div>
+            </div>
+
+            <div class="adoption-trend">
+                <h4>Adoption Trend</h4>
+                <p><strong>Case Priority - 08</strong></p>
+                <!-- Insert your trend chart or relevant data here -->
+            </div>
+        </div>
+
+        <div class="additional-content">
+            <div class="section">
+                <h4>Recent Activities</h4>
+                <p>Lorem ipsum dolor sit amet, consectetur adipiscing elit. Praesent id erat a lacus gravida tempor.</p>
+            </div>
+            <div class="section">
+                <h4>Case Details</h4>
+                <p>Curabitur vehicula, quam sed tincidunt vestibulum, lorem nulla sodales felis, a varius nunc nulla vel orci.</p>
+            </div>
+            <div class="section">
+                <h4>Statistics Overview</h4>
+                <p>Vivamus laoreet felis eget est bibendum, a convallis elit venenatis. Donec aliquam sem sed nibh accumsan, in dictum lacus dignissim.</p>
+            </div>
+            <div class="section">
+                <h4>Upcoming Deadlines</h4>
+                <p>Maecenas nec magna vel sapien pharetra pharetra. Sed sit amet ultricies ante, a vulputate justo.</p>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    document.getElementById('hamburger').onclick = function() {
+        var sidebar = document.getElementById('sidebar');
+        var mainContent = document.getElementById('main-content');
+        if (sidebar.style.transform === 'translateX(0%)' || sidebar.style.transform === '') {
+            sidebar.style.transform = 'translateX(-100%)';
+            mainContent.style.marginLeft = '0';
+            mainContent.style.width = '100%';
+        } else {
+            sidebar.style.transform = 'translateX(0%)';
+            mainContent.style.marginLeft = '250px';
+            mainContent.style.width = 'calc(100% - 250px)';
+        }
+    };
+</script>
+
+</body>
+</html>
