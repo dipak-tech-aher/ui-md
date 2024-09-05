@@ -25,8 +25,10 @@ export const Carousal = () => {
 
     if (newIndex < 0) {
       newIndex = totalItems - visibleItems;
-    } else if (newIndex > totalItems - visibleItems) {
+    } else if (newIndex >= totalItems) {
       newIndex = 0;
+    } else if (newIndex > totalItems - visibleItems) {
+      newIndex = totalItems - visibleItems;
     }
 
     setCurrentIndex(newIndex);
@@ -44,6 +46,7 @@ export const Carousal = () => {
       ];
     }
   };
+
   return (
     <div className="carousel">
       <button className="carousel-btn prev" onClick={() => moveSlide(-3)}>
@@ -63,7 +66,6 @@ export const Carousal = () => {
       <div
         className="carousel-container"
         style={{
-          // transform: 'translate3d(-1029.97px, 0px, 0px)',
           transition: 'transform 1s ease-in-out',
         }}
       >
