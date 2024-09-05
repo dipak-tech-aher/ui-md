@@ -9,34 +9,46 @@ const Carousel = () => {
     { label: 'No of cases routed to License MD', number: '12' },
     { label: 'Pending Approval', number: '08' },
     { label: 'New Requests', number: '15' },
-    { label: 'Completed Tasks', number: '20' },
+    { label: 'Completed Tasks', number: '20' }
   ];
 
-  const moveSlide = (direction) => {
-    const totalItems = items.length;
-    const visibleItems = 3;
+  const visibleItems = 3;
+  const totalItems = items.length;
 
+  const moveSlide = (direction) => {
     let newIndex = currentIndex + direction;
 
     if (newIndex < 0) {
       newIndex = totalItems - visibleItems;
-    } else if (newIndex >= totalItems) {
+    } else if (newIndex > totalItems - visibleItems) {
       newIndex = 0;
     }
 
     setCurrentIndex(newIndex);
   };
 
+  const getVisibleItems = () => {
+    const endIndex = currentIndex + visibleItems;
+    if (endIndex <= totalItems) {
+      return items.slice(currentIndex, endIndex);
+    } else {
+      // If endIndex goes beyond the totalItems, wrap around
+      return [...items.slice(currentIndex, totalItems), ...items.slice(0, endIndex - totalItems)];
+    }
+  };
+
   return (
     <div className="carousel">
       <button className="carousel-btn prev" onClick={() => moveSlide(-1)}></button>
-      <div className="carousel-container" style={{ transform: `translateX(${-currentIndex * (100 / 3)}%)` }}>
-        {items.map((item, index) => (
-          <div key={index} className="carousel-item">
-            <span className="label">{item.label}</span>
-            <span className="number">{item.number}</span>
-          </div>
-        ))}
+      <div className="carousel-container">
+        <div className="carousel-items">
+          {getVisibleItems().map((item, index) => (
+            <div className="carousel-item" key={index}>
+              <span className="label">{item.label}</span>
+              <span className="number">{item.number}</span>
+            </div>
+          ))}
+        </div>
       </div>
       <button className="carousel-btn next" onClick={() => moveSlide(1)}></button>
     </div>
@@ -44,87 +56,3 @@ const Carousel = () => {
 };
 
 export default Carousel;
-
-
-
-.carousel {
-  display: flex;
-  align-items: center;
-  width: 600px;
-  margin: auto;
-  background-color: #f8f8f8;
-  border-radius: 10px;
-  overflow: hidden;
-  position: relative;
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-}
-
-.carousel-btn {
-  width: 30px;
-  height: 30px;
-  background-color: #e0e0e0;
-  border: none;
-  border-radius: 50%;
-  cursor: pointer;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-  position: absolute;
-  z-index: 2;
-}
-
-.carousel-btn.prev {
-  left: 5px;
-}
-
-.carousel-btn.next {
-  right: 5px;
-}
-
-.carousel-btn:before {
-  content: '';
-  position: absolute;
-  width: 0;
-  height: 0;
-}
-
-.carousel-btn.prev:before {
-  border-left: 10px solid #555;
-  border-top: 5px solid transparent;
-  border-bottom: 5px solid transparent;
-  left: 10px;
-}
-
-.carousel-btn.next:before {
-  border-right: 10px solid #555;
-  border-top: 5px solid transparent;
-  border-bottom: 5px solid transparent;
-  right: 10px;
-}
-
-.carousel-btn:hover {
-  background-color: #d0d0d0;
-}
-
-.carousel-container {
-  display: flex;
-  transition: transform 0.5s ease-in-out;
-  width: 100%;
-  overflow: hidden;
-}
-
-.carousel-item {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  min-width: 33.33%;
-  padding: 10px;
-  background-color: #ffffff;
-  border-radius: 10px;
-  margin: 5px;
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-  text-align: center;
-}
-
