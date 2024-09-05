@@ -19,6 +19,7 @@ export const Carousal = () => {
 
   const visibleItems = 3;
   const totalItems = items.length;
+  const itemWidth = 200; // Adjust this value according to your item width in pixels
 
   const moveSlide = (direction) => {
     let newIndex = currentIndex + direction;
@@ -66,11 +67,17 @@ export const Carousal = () => {
       <div
         className="carousel-container"
         style={{
-          transition: 'transform 1s ease-in-out',
+          transform: `translateX(-${currentIndex * itemWidth}px)`,
+          transition: 'transform 0.5s ease-in-out',
+          display: 'flex',
         }}
       >
-        {getVisibleItems().map((item, index) => (
-          <div className="carousel-item" key={index}>
+        {items.map((item, index) => (
+          <div
+            className="carousel-item"
+            key={index}
+            style={{ minWidth: `${itemWidth}px` }}
+          >
             <span className="label">{item.label}</span>
             <span className="number">{item.number}</span>
           </div>
