@@ -1,15 +1,20 @@
-import React, { useState } from 'react';
-import './Carousel.css';
+import { useState } from 'react';
 
-const Carousel = () => {
+export const Carousal = () => {
   const [currentIndex, setCurrentIndex] = useState(0);
 
   const items = [
-    { label: 'Waiting of sign off', number: '06' },
-    { label: 'No of cases routed to License MD', number: '12' },
-    { label: 'Pending Approval', number: '08' },
-    { label: 'New Requests', number: '15' },
-    { label: 'Completed Tasks', number: '20' }
+    { label: 'Waiting of sign off', number: '1' },
+    { label: 'No of cases routed to License MD', number: '2' },
+    { label: 'Pending Approval', number: '3' },
+    { label: 'New Requests', number: '4' },
+    { label: 'Completed Tasks', number: '5' },
+    { label: 'New Requests', number: '6' },
+    { label: 'Completed Tasks', number: '7' },
+    { label: 'New Requests', number: '8' },
+    { label: 'Completed Tasks', number: '9' },
+    { label: 'New Requests', number: '10' },
+    { label: 'Completed Tasks', number: '11' },
   ];
 
   const visibleItems = 3;
@@ -33,26 +38,56 @@ const Carousel = () => {
       return items.slice(currentIndex, endIndex);
     } else {
       // If endIndex goes beyond the totalItems, wrap around
-      return [...items.slice(currentIndex, totalItems), ...items.slice(0, endIndex - totalItems)];
+      return [
+        ...items.slice(currentIndex, totalItems),
+        ...items.slice(0, endIndex - totalItems),
+      ];
     }
   };
-
   return (
     <div className="carousel">
-      <button className="carousel-btn prev" onClick={() => moveSlide(-1)}></button>
-      <div className="carousel-container">
-        <div className="carousel-items">
-          {getVisibleItems().map((item, index) => (
-            <div className="carousel-item" key={index}>
-              <span className="label">{item.label}</span>
-              <span className="number">{item.number}</span>
-            </div>
-          ))}
-        </div>
+      <button className="carousel-btn prev" onClick={() => moveSlide(-3)}>
+        <svg
+          xmlns="http://www.w3.org/2000/svg"
+          width="14"
+          height="14"
+          viewBox="0 0 14 14"
+          fill="none"
+        >
+          <path
+            d="M10.4331 2.19884L9.40061 1.16634L3.56727 6.99967L9.40061 12.833L10.4331 11.8005L5.63227 6.99967L10.4331 2.19884Z"
+            fill="#424242"
+          />
+        </svg>
+      </button>
+      <div
+        className="carousel-container"
+        style={{
+          // transform: 'translate3d(-1029.97px, 0px, 0px)',
+          transition: 'transform 1s ease-in-out',
+        }}
+      >
+        {getVisibleItems().map((item, index) => (
+          <div className="carousel-item" key={index}>
+            <span className="label">{item.label}</span>
+            <span className="number">{item.number}</span>
+          </div>
+        ))}
       </div>
-      <button className="carousel-btn next" onClick={() => moveSlide(1)}></button>
+      <button className="carousel-btn next" onClick={() => moveSlide(3)}>
+        <svg
+          xmlns="http://www.w3.org/2000/svg"
+          width="14"
+          height="14"
+          viewBox="0 0 14 14"
+          fill="none"
+        >
+          <path
+            d="M3.56714 11.8012L4.59964 12.8337L10.433 7.00033L4.59964 1.16699L3.56714 2.19949L8.36797 7.00033L3.56714 11.8012Z"
+            fill="#424242"
+          />
+        </svg>
+      </button>
     </div>
   );
 };
-
-export default Carousel;
