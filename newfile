@@ -58,6 +58,7 @@
 
 
 
+
 import "./styles.css";
 import { useState } from "react";
 
@@ -78,13 +79,14 @@ export default function App() {
 
   const totalItems = items.length;
   const visibleItems = 3; // Number of items visible at one time
+  const totalPages = Math.ceil(totalItems / visibleItems); // Total sets of items
 
   const moveSlide = (direction) => {
-    let newIndex = currentIndex + direction;
+    let newIndex = currentIndex + direction * visibleItems;
     if (newIndex < 0) {
-      newIndex = totalItems - visibleItems;
-    } else if (newIndex >= totalItems - visibleItems + 1) {
-      newIndex = 0;
+      newIndex = (totalPages - 1) * visibleItems; // Go to the last set
+    } else if (newIndex >= totalItems) {
+      newIndex = 0; // Wrap around to the first set
     }
     setCurrentIndex(newIndex);
   };
