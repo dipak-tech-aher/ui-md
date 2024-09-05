@@ -1,121 +1,46 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>404 Page Not Found</title>
-    <!-- <link rel="stylesheet" href="styles.css"> -->
-    <style>
-        .carousel {
-    display: flex;
-    align-items: center;
-    width: 600px;
-    margin: auto;
-    background-color: #f8f8f8;
-    border-radius: 10px;
-    overflow: hidden;
-    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-}
+import React, { useState } from 'react';
+import './Carousel.css';
 
-.carousel-btn {
-    background-color: transparent;
-    border: none;
-    font-size: 24px;
-    color: #888;
-    cursor: pointer;
-    padding: 0 10px;
-    z-index: 1;
-}
+const Carousel = () => {
+  const [currentIndex, setCurrentIndex] = useState(0);
 
-.carousel-btn:hover {
-    color: #000;
-}
+  const items = [
+    { label: 'Waiting of sign off', number: '06' },
+    { label: 'No of cases routed to License MD', number: '12' },
+    { label: 'Pending Approval', number: '08' },
+    { label: 'New Requests', number: '15' },
+    { label: 'Completed Tasks', number: '20' },
+  ];
 
-.carousel-container {
-    display: flex;
-    transition: transform 0.5s ease-in-out;
-    width: 100%;
-}
+  const moveSlide = (direction) => {
+    const totalItems = items.length;
+    const visibleItems = 3;
 
-.carousel-item {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    min-width: 33.33%; /* Adjust to show 3 items */
-    padding: 10px;
-    background-color: #ffffff;
-    border-radius: 10px;
-    margin: 5px;
-    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-    text-align: center;
-}
+    let newIndex = currentIndex + direction;
 
-.label {
-    font-size: 14px;
-    color: #555;
-    margin-bottom: 10px;
-}
-
-.number {
-    font-size: 24px;
-    font-weight: bold;
-    color: #000;
-}
-
-    </style>
-</head>
-<body>
-    <div class="carousel">
-        <button class="carousel-btn prev" onclick="moveSlide(-1)">&#10094;</button>
-        <div class="carousel-container">
-            <div class="carousel-item">
-                <span class="label">Waiting of sign off</span>
-                <span class="number">06</span>
-            </div>
-            <div class="carousel-item">
-                <span class="label">No of cases routed to License MD</span>
-                <span class="number">12</span>
-            </div>
-            <div class="carousel-item">
-                <span class="label">Pending Approval</span>
-                <span class="number">08</span>
-            </div>
-            <div class="carousel-item">
-                <span class="label">New Requests</span>
-                <span class="number">15</span>
-            </div>
-            <div class="carousel-item">
-                <span class="label">Completed Tasks</span>
-                <span class="number">20</span>
-            </div>
-        </div>
-        <button class="carousel-btn next" onclick="moveSlide(1)">&#10095;</button>
-    </div>
-      
-    
-</body>
-<script>
-    let currentIndex = 0;
-
-function moveSlide(direction) {
-    const carouselContainer = document.querySelector('.carousel-container');
-    const totalItems = document.querySelectorAll('.carousel-item').length;
-    const visibleItems = 3; // Number of items visible at one time
-
-    currentIndex += direction;
-
-    if (currentIndex < 0) {
-        currentIndex = totalItems - visibleItems;
-    } else if (currentIndex > totalItems - visibleItems) {
-        currentIndex = 0;
+    if (newIndex < 0) {
+      newIndex = totalItems - visibleItems;
+    } else if (newIndex >= totalItems) {
+      newIndex = 0;
     }
 
-    const offset = -currentIndex * (100 / visibleItems);
-    carouselContainer.style.transform = `translateX(${offset}%)`;
-}
-``
+    setCurrentIndex(newIndex);
+  };
 
+  return (
+    <div className="carousel">
+      <button className="carousel-btn prev" onClick={() => moveSlide(-1)}></button>
+      <div className="carousel-container" style={{ transform: `translateX(${-currentIndex * (100 / 3)}%)` }}>
+        {items.map((item, index) => (
+          <div key={index} className="carousel-item">
+            <span className="label">{item.label}</span>
+            <span className="number">{item.number}</span>
+          </div>
+        ))}
+      </div>
+      <button className="carousel-btn next" onClick={() => moveSlide(1)}></button>
+    </div>
+  );
+};
 
-</script>
-</html>
+export default Carousel;
