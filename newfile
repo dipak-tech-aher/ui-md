@@ -2,6 +2,7 @@ import { useState } from 'react';
 
 export const Carousal = () => {
   const [currentIndex, setCurrentIndex] = useState(0);
+  const itemWidth = 200; // Adjust this value according to your item width in pixels
 
   const items = [
     { label: 'Waiting of sign off', number: '1' },
@@ -19,7 +20,6 @@ export const Carousal = () => {
 
   const visibleItems = 3;
   const totalItems = items.length;
-  const itemWidth = 200; // Adjust this value according to your item width in pixels
 
   const moveSlide = (direction) => {
     let newIndex = currentIndex + direction;
@@ -72,7 +72,7 @@ export const Carousal = () => {
           display: 'flex',
         }}
       >
-        {items.map((item, index) => (
+        {getVisibleItems().map((item, index) => (
           <div
             className="carousel-item"
             key={index}
