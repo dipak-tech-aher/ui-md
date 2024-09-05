@@ -44,3 +44,87 @@ const Carousel = () => {
 };
 
 export default Carousel;
+
+
+
+.carousel {
+  display: flex;
+  align-items: center;
+  width: 600px;
+  margin: auto;
+  background-color: #f8f8f8;
+  border-radius: 10px;
+  overflow: hidden;
+  position: relative;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.carousel-btn {
+  width: 30px;
+  height: 30px;
+  background-color: #e0e0e0;
+  border: none;
+  border-radius: 50%;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  position: absolute;
+  z-index: 2;
+}
+
+.carousel-btn.prev {
+  left: 5px;
+}
+
+.carousel-btn.next {
+  right: 5px;
+}
+
+.carousel-btn:before {
+  content: '';
+  position: absolute;
+  width: 0;
+  height: 0;
+}
+
+.carousel-btn.prev:before {
+  border-left: 10px solid #555;
+  border-top: 5px solid transparent;
+  border-bottom: 5px solid transparent;
+  left: 10px;
+}
+
+.carousel-btn.next:before {
+  border-right: 10px solid #555;
+  border-top: 5px solid transparent;
+  border-bottom: 5px solid transparent;
+  right: 10px;
+}
+
+.carousel-btn:hover {
+  background-color: #d0d0d0;
+}
+
+.carousel-container {
+  display: flex;
+  transition: transform 0.5s ease-in-out;
+  width: 100%;
+  overflow: hidden;
+}
+
+.carousel-item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-width: 33.33%;
+  padding: 10px;
+  background-color: #ffffff;
+  border-radius: 10px;
+  margin: 5px;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  text-align: center;
+}
+
