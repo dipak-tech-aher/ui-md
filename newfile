@@ -1,117 +1,111 @@
-.carousel {
-  display: flex;
-  align-items: center;
-  width: 100%;
-  margin: auto;
-  background-color: #f8f8f8;
-  border-radius: 10px;
-  overflow: hidden;
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Font Size Slider</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            height: 100vh;
+            margin: 0;
+        }
 
-.carousel-btn {
-  background-color: transparent;
-  border: none;
-  font-size: 24px;
-  color: #888;
-  cursor: pointer;
-  padding: 0 10px;
-  z-index: 1;
-}
+        .container {
+            display: flex;
+            align-items: center;
+        }
 
-.carousel-btn:hover {
-  color: #000;
-}
+        .label {
+            font-size: 16px;
+            margin-right: 10px;
+            font-weight: bold;
+        }
 
-.carousel-container {
-  display: flex;
-  transition: transform 0.5s ease-in-out;
-  width: 100%;
-}
+        .font-label {
+            font-size: 16px;
+            margin: 0 5px;
+            font-weight: bold;
+        }
 
-.carousel-item {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  min-width: 33.33%; /* Adjust to show 3 items */
-  padding: 10px;
-  background-color: #ffffff;
-  border-radius: 10px;
-  margin: 5px;
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-  text-align: center;
-}
+        .slider-container {
+            position: relative;
+            width: 150px;
+            height: 5px;
+            background-color: #ccc;
+            border-radius: 5px;
+        }
 
-.label {
-  font-size: 14px;
-  color: #555;
-  margin-bottom: 10px;
-}
+        .slider-container::before {
+            content: '';
+            position: absolute;
+            top: -3px;
+            left: 0;
+            width: 100%;
+            height: 11px;
+            background: repeating-linear-gradient(to right, 
+                #000 0%, 
+                #000 1px, 
+                transparent 1px, 
+                transparent calc((100% / 5) - 1px)
+            );
+        }
 
-.number {
-  font-size: 24px;
-  font-weight: bold;
-  color: #000;
-}
+        .slider {
+            position: absolute;
+            top: -7px;
+            left: 0;
+            width: 100%;
+            -webkit-appearance: none;
+            appearance: none;
+            background: none;
+            outline: none;
+            margin: 0;
+        }
 
+        .slider::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            appearance: none;
+            width: 15px;
+            height: 15px;
+            background: #000;
+            border-radius: 50%;
+            cursor: pointer;
+            position: relative;
+            top: 2px; /* Adjusted to align the thumb with the track */
+        }
 
-
-
-
-import "./styles.css";
-import { useState } from "react";
-
-export default function App() {
-  const [currentIndex, setCurrentIndex] = useState(0);
-
-  const items = [
-    { label: "Waiting of sign off", number: 1 },
-    { label: "No of cases routed to License MD", number: 2 },
-    { label: "No of cases routed to License MD", number: 3 },
-    { label: "No of cases routed to License MD", number: 4 },
-    { label: "No of cases routed to License MD", number: 5 },
-    { label: "No of cases routed to License MD", number: 6 },
-    { label: "No of cases routed to License MD", number: 7 },
-    { label: "No of cases routed to License MD", number: 8 },
-    { label: "No of cases routed to License MD", number: 9 },
-  ];
-
-  const totalItems = items.length;
-  const visibleItems = 3; // Number of items visible at one time
-  const totalPages = Math.ceil(totalItems / visibleItems); // Total sets of items
-
-  const moveSlide = (direction) => {
-    let newIndex = currentIndex + direction * visibleItems;
-    if (newIndex < 0) {
-      newIndex = (totalPages - 1) * visibleItems; // Go to the last set
-    } else if (newIndex >= totalItems) {
-      newIndex = 0; // Wrap around to the first set
-    }
-    setCurrentIndex(newIndex);
-  };
-
-  const offset = -currentIndex * (100 / visibleItems);
-
-  return (
-    <div className="carousel">
-      <button className="carousel-btn prev" onClick={() => moveSlide(-1)}>
-        &#10094;
-      </button>
-      <div
-        className="carousel-container"
-        style={{ transform: `translateX(${offset}%)` }}
-      >
-        {items.map((item, index) => (
-          <div className="carousel-item" key={index}>
-            <span className="label">{item.label}</span>
-            <span className="number">{item.number}</span>
-          </div>
-        ))}
-      </div>
-      <button className="carousel-btn next" onClick={() => moveSlide(1)}>
-        &#10095;
-      </button>
+        .slider::-moz-range-thumb {
+            width: 15px;
+            height: 15px;
+            background: #000;
+            border-radius: 50%;
+            cursor: pointer;
+            position: relative;
+            top: 2px; /* Adjusted to align the thumb with the track */
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="label">Font Size</div>
+        <div class="font-label">A</div>
+        <div class="slider-container">
+            <input type="range" min="10" max="36" value="16" step="5.2" class="slider" id="fontSizeSlider">
+        </div>
+        <div class="font-label">A</div>
     </div>
-  );
-}
+
+    <script>
+        // const slider = document.getElementById('fontSizeSlider');
+        // const body = document.body;
+
+        // slider.addEventListener('input', function() {
+        //     body.style.fontSize = slider.value + 'px';
+        // });
+    </script>
+</body>
+</html>
