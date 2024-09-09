@@ -1,124 +1,105 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <style>
-        body {
-            font-family: Arial, sans-serif;
-        }
-        .container {
-            width: 60%;
-            margin: 20px auto;
-            border: 1px solid #ddd;
-            padding: 10px;
-            border-radius: 5px;
-        }
-        .header {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-bottom: 10px;
-        }
-        .header .select-all {
-            display: flex;
-            align-items: center;
-        }
-        .header .actions {
-            display: flex;
-            align-items: center;
-        }
-        .header .delete-all, 
-        .header label {
-            margin-left: 10px;
-            color: #007bff;
-            cursor: pointer;
-            font-weight: bold;
-        }
-        .item {
-            display: flex;
-            align-items: center;
-            padding: 10px 0;
-            border-bottom: 1px solid #ddd;
-        }
-        .item:last-child {
-            border-bottom: none;
-        }
-        .checkbox {
-            margin-right: 10px;
-        }
-        .text {
-            flex: 1;
-        }
-        .item .actions {
-            display: flex;
-            align-items: center;
-            margin-left: 20px;
-        }
-        .item .actions .delete {
-            margin-right: 10px;
-            color: #007bff;
-            cursor: pointer;
-        }
-        .item .actions input[type="radio"] {
-            margin-right: 5px;
-        }
-    </style>
-</head>
-<body>
-    <div class="container">
-        <div class="header">
-            <div class="select-all">
-                <input type="checkbox" id="select-all">
-                <label for="select-all">Select All</label>
-            </div>
-            <div class="actions">
-                <div class="delete-all">🗑️ Delete</div>
-                <label><input type="radio" name="select-all-option"> Yes</label>
-                <label><input type="radio" name="select-all-option"> No</label>
-            </div>
-        </div>
-        
-        <div class="item">
-            <input type="checkbox" class="checkbox">
-            <div class="text">
-                Lorem ipsum dolor sit amet, consectetur adipiscing elit. Nullam eget vestibulum neque. Nunc tempus ex a lectus. Maecenas tristique iaculis ex in congue. Sed dictum consequat sapien, ut feugiat tortor faucibus a. Quisque auctor turpis in justo porttitor, vitae volutpat eros tristique.
-            </div>
-            <div class="actions">
-                <label><input type="radio" name="option1"> Yes</label>
-                <label><input type="radio" name="option1"> No</label>
-            </div>
-        </div>
-        <div class="item">
-            <input type="checkbox" class="checkbox">
-            <div class="text">
-                Lorem ipsum dolor sit amet, consectetur adipiscing elit. Nullam eget vestibulum neque. Nunc tempus ex a lectus. Maecenas tristique iaculis ex in congue.
-            </div>
-            <div class="actions">
-                <label><input type="radio" name="option2"> Yes</label>
-                <label><input type="radio" name="option2"> No</label>
-            </div>
-        </div>
-        <div class="item">
-            <input type="checkbox" class="checkbox">
-            <div class="text">
-                Lorem ipsum dolor sit amet, consectetur adipiscing elit. Nullam eget vestibulum neque. Nunc tempus ex a lectus. Maecenas tristique iaculis ex in congue.
-            </div>
-            <div class="actions">
-                <label><input type="radio" name="option3"> Yes</label>
-                <label><input type="radio" name="option3"> No</label>
-            </div>
-        </div>
-        <div class="item">
-            <input type="checkbox" class="checkbox">
-            <div class="text">
-                Lorem ipsum dolor sit amet, consectetur adipiscing elit. Nullam eget vestibulum neque. Nunc tempus ex a lectus. Maecenas tristique iaculis ex in congue.
-            </div>
-            <div class="actions">
-                <label><input type="radio" name="option4"> Yes</label>
-                <label><input type="radio" name="option4"> No</label>
-            </div>
-        </div>
+import React, { useState, useRef } from "react";
+import ReactQuill from "react-quill";
+import "react-quill/dist/quill.snow.css";
+
+const MyTextEditor = () => {
+  const [value, setValue] = useState("");
+  const quillRef = useRef(null);
+
+  // Find and highlight text
+  const findText = (searchTerm) => {
+    const editor = quillRef.current.getEditor();
+    const text = editor.getText();
+    const index = text.indexOf(searchTerm);
+
+    if (index !== -1) {
+      editor.setSelection(index, searchTerm.length);
+    } else {
+      alert("Text not found");
+    }
+  };
+
+  // Replace the found text
+  const replaceText = (searchTerm, replaceTerm) => {
+    const editor = quillRef.current.getEditor();
+    const text = editor.getText();
+    const index = text.indexOf(searchTerm);
+
+    if (index !== -1) {
+      editor.setSelection(index, searchTerm.length);
+      editor.deleteText(index, searchTerm.length);
+      editor.insertText(index, replaceTerm);
+    } else {
+      alert("Text not found");
+    }
+  };
+
+  return (
+    <div>
+      <ReactQuill
+        ref={quillRef}
+        value={value}
+        onChange={setValue}
+        modules={{
+          toolbar: [
+            [{ font: [] }, { header: [1, 2, false] }],
+            ["bold", "italic", "underline", "strike"],
+            [{ color: [] }, { background: [] }],
+            [{ align: [] }],
+            [{ list: "ordered" }, { list: "bullet" }],
+            ["link", "image"],
+            ["clean"],
+          ],
+        }}
+        formats={[
+          "font",
+          "header",
+          "bold",
+          "italic",
+          "underline",
+          "strike",
+          "color",
+          "background",
+          "align",
+          "list",
+          "bullet",
+          "link",
+          "image",
+        ]}
+        style={{ minHeight: "200px" }}
+        placeholder="Compose your text here..."
+      />
+      <div style={{ marginTop: "20px" }}>
+        <input
+          type="text"
+          id="findInput"
+          placeholder="Find text"
+          style={{ marginRight: "10px" }}
+        />
+        <button
+          onClick={() => findText(document.getElementById("findInput").value)}
+        >
+          Find
+        </button>
+        <input
+          type="text"
+          id="replaceInput"
+          placeholder="Replace with"
+          style={{ marginLeft: "20px", marginRight: "10px" }}
+        />
+        <button
+          onClick={() =>
+            replaceText(
+              document.getElementById("findInput").value,
+              document.getElementById("replaceInput").value
+            )
+          }
+        >
+          Replace
+        </button>
+      </div>
     </div>
-</body>
-</html>
+  );
+};
+
+export default MyTextEditor;
