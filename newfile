@@ -1,119 +1,124 @@
-import "./styles.css";
-import React, { useState } from "react";
-export default function App() {
-  const [fontSize, setFontSize] = useState(16);
-
-  const handleSliderChange = (event) => {
-    setFontSize(event.target.value);
-  };
-  return (
-    <div className="App">
-      <div className="container" style={{ fontSize: `${fontSize}px` }}>
-        <div className="label">Font Size</div>
-        <div className="font-label">A</div>
-        <div className="slider-container">
-          <input
-            type="range"
-            min="10"
-            max="36"
-            value={fontSize}
-            step="5.2"
-            className="slider"
-            onChange={handleSliderChange}
-          />
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+        }
+        .container {
+            width: 60%;
+            margin: 20px auto;
+            border: 1px solid #ddd;
+            padding: 10px;
+            border-radius: 5px;
+        }
+        .header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 10px;
+        }
+        .header .select-all {
+            display: flex;
+            align-items: center;
+        }
+        .header .actions {
+            display: flex;
+            align-items: center;
+        }
+        .header .delete-all, 
+        .header label {
+            margin-left: 10px;
+            color: #007bff;
+            cursor: pointer;
+            font-weight: bold;
+        }
+        .item {
+            display: flex;
+            align-items: center;
+            padding: 10px 0;
+            border-bottom: 1px solid #ddd;
+        }
+        .item:last-child {
+            border-bottom: none;
+        }
+        .checkbox {
+            margin-right: 10px;
+        }
+        .text {
+            flex: 1;
+        }
+        .item .actions {
+            display: flex;
+            align-items: center;
+            margin-left: 20px;
+        }
+        .item .actions .delete {
+            margin-right: 10px;
+            color: #007bff;
+            cursor: pointer;
+        }
+        .item .actions input[type="radio"] {
+            margin-right: 5px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <div class="select-all">
+                <input type="checkbox" id="select-all">
+                <label for="select-all">Select All</label>
+            </div>
+            <div class="actions">
+                <div class="delete-all">🗑️ Delete</div>
+                <label><input type="radio" name="select-all-option"> Yes</label>
+                <label><input type="radio" name="select-all-option"> No</label>
+            </div>
         </div>
-        <div className="font-label">A</div>
-      </div>
+        
+        <div class="item">
+            <input type="checkbox" class="checkbox">
+            <div class="text">
+                Lorem ipsum dolor sit amet, consectetur adipiscing elit. Nullam eget vestibulum neque. Nunc tempus ex a lectus. Maecenas tristique iaculis ex in congue. Sed dictum consequat sapien, ut feugiat tortor faucibus a. Quisque auctor turpis in justo porttitor, vitae volutpat eros tristique.
+            </div>
+            <div class="actions">
+                <label><input type="radio" name="option1"> Yes</label>
+                <label><input type="radio" name="option1"> No</label>
+            </div>
+        </div>
+        <div class="item">
+            <input type="checkbox" class="checkbox">
+            <div class="text">
+                Lorem ipsum dolor sit amet, consectetur adipiscing elit. Nullam eget vestibulum neque. Nunc tempus ex a lectus. Maecenas tristique iaculis ex in congue.
+            </div>
+            <div class="actions">
+                <label><input type="radio" name="option2"> Yes</label>
+                <label><input type="radio" name="option2"> No</label>
+            </div>
+        </div>
+        <div class="item">
+            <input type="checkbox" class="checkbox">
+            <div class="text">
+                Lorem ipsum dolor sit amet, consectetur adipiscing elit. Nullam eget vestibulum neque. Nunc tempus ex a lectus. Maecenas tristique iaculis ex in congue.
+            </div>
+            <div class="actions">
+                <label><input type="radio" name="option3"> Yes</label>
+                <label><input type="radio" name="option3"> No</label>
+            </div>
+        </div>
+        <div class="item">
+            <input type="checkbox" class="checkbox">
+            <div class="text">
+                Lorem ipsum dolor sit amet, consectetur adipiscing elit. Nullam eget vestibulum neque. Nunc tempus ex a lectus. Maecenas tristique iaculis ex in congue.
+            </div>
+            <div class="actions">
+                <label><input type="radio" name="option4"> Yes</label>
+                <label><input type="radio" name="option4"> No</label>
+            </div>
+        </div>
     </div>
-  );
-}
-
-
-
-.App {
-  font-family: sans-serif;
-  text-align: center;
-}
-
-/* FontSizeSlider.css */
-body {
-  font-family: Arial, sans-serif;
-  margin: 0;
-}
-
-.container {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  height: 100vh;
-}
-
-.label {
-  font-size: 16px;
-  margin-right: 10px;
-  font-weight: bold;
-}
-
-.font-label {
-  font-size: 16px;
-  margin: 0 5px;
-  font-weight: bold;
-}
-
-.slider-container {
-  position: relative;
-  width: 150px;
-  height: 5px;
-  background-color: #ccc;
-  border-radius: 5px;
-}
-
-.slider-container::before {
-  content: "";
-  position: absolute;
-  top: -3px;
-  left: 0;
-  width: 100%;
-  height: 11px;
-  background: repeating-linear-gradient(
-    to right,
-    #000 0%,
-    #000 1px,
-    transparent 1px,
-    transparent calc((100% / 5) - 1px)
-  );
-}
-
-.slider {
-  position: absolute;
-  top: -7px;
-  left: 0;
-  width: 100%;
-  -webkit-appearance: none;
-  appearance: none;
-  background: none;
-  outline: none;
-  margin: 0;
-}
-
-.slider::-webkit-slider-thumb {
-  -webkit-appearance: none;
-  appearance: none;
-  width: 15px;
-  height: 15px;
-  background: #000;
-  border-radius: 50%;
-  cursor: pointer;
-  position: relative;
-  top: 2px; /* Adjusted to align the thumb with the track */
-}
-
-.slider::-moz-range-thumb {
-  width: 15px;
-  height: 15px;
-  background: #000;
-  border-radius: 50%;
-  cursor: pointer;
-  position: relative;
-  top: 2px; /* Adjusted to align the thumb with the track */
-}
+</body>
+</html>
