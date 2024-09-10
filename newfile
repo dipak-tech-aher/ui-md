@@ -1,105 +1,70 @@
-import React, { useState, useRef } from "react";
-import ReactQuill from "react-quill";
-import "react-quill/dist/quill.snow.css";
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <style>
+        /* Container for the toggle switch */
+.toggle-switch {
+  display: flex;
+  align-items: center;
+}
 
-const MyTextEditor = () => {
-  const [value, setValue] = useState("");
-  const quillRef = useRef(null);
+/* Hide the checkbox input */
+.toggle-input {
+  display: none;
+}
 
-  // Find and highlight text
-  const findText = (searchTerm) => {
-    const editor = quillRef.current.getEditor();
-    const text = editor.getText();
-    const index = text.indexOf(searchTerm);
+/* The label will be the toggle button */
+.toggle-label {
+  width: 40px;
+  height: 20px;
+  background-color: #88C0D0; /* Background color similar to the image */
+  border-radius: 20px;
+  position: relative;
+  cursor: pointer;
+  margin-right: 10px;
+  transition: background-color 0.3s ease;
+}
 
-    if (index !== -1) {
-      editor.setSelection(index, searchTerm.length);
-    } else {
-      alert("Text not found");
-    }
-  };
+/* Circle inside the switch */
+.toggle-label::after {
+  content: '';
+  position: absolute;
+  top: 2px;
+  left: 2px;
+  width: 16px;
+  height: 16px;
+  background-color: white;
+  border-radius: 50%;
+  transition: transform 0.3s ease;
+}
 
-  // Replace the found text
-  const replaceText = (searchTerm, replaceTerm) => {
-    const editor = quillRef.current.getEditor();
-    const text = editor.getText();
-    const index = text.indexOf(searchTerm);
+/* Move the circle when the toggle is checked */
+.toggle-input:checked + .toggle-label::after {
+  transform: translateX(20px);
+}
 
-    if (index !== -1) {
-      editor.setSelection(index, searchTerm.length);
-      editor.deleteText(index, searchTerm.length);
-      editor.insertText(index, replaceTerm);
-    } else {
-      alert("Text not found");
-    }
-  };
+/* Change the background color when checked */
+.toggle-input:checked + .toggle-label {
+  background-color: #5E81AC; /* Adjust the color if needed */
+}
 
-  return (
-    <div>
-      <ReactQuill
-        ref={quillRef}
-        value={value}
-        onChange={setValue}
-        modules={{
-          toolbar: [
-            [{ font: [] }, { header: [1, 2, false] }],
-            ["bold", "italic", "underline", "strike"],
-            [{ color: [] }, { background: [] }],
-            [{ align: [] }],
-            [{ list: "ordered" }, { list: "bullet" }],
-            ["link", "image"],
-            ["clean"],
-          ],
-        }}
-        formats={[
-          "font",
-          "header",
-          "bold",
-          "italic",
-          "underline",
-          "strike",
-          "color",
-          "background",
-          "align",
-          "list",
-          "bullet",
-          "link",
-          "image",
-        ]}
-        style={{ minHeight: "200px" }}
-        placeholder="Compose your text here..."
-      />
-      <div style={{ marginTop: "20px" }}>
-        <input
-          type="text"
-          id="findInput"
-          placeholder="Find text"
-          style={{ marginRight: "10px" }}
-        />
-        <button
-          onClick={() => findText(document.getElementById("findInput").value)}
-        >
-          Find
-        </button>
-        <input
-          type="text"
-          id="replaceInput"
-          placeholder="Replace with"
-          style={{ marginLeft: "20px", marginRight: "10px" }}
-        />
-        <button
-          onClick={() =>
-            replaceText(
-              document.getElementById("findInput").value,
-              document.getElementById("replaceInput").value
-            )
-          }
-        >
-          Replace
-        </button>
+/* Text beside the toggle */
+.label-text {
+  font-family: Arial, sans-serif;
+  font-size: 14px;
+  color: #4A4A4A; /* Adjust the text color */
+}
+
+    </style>
+</head>
+<body>
+    <div class="toggle-switch">
+        <input type="checkbox" id="signatureToggle" class="toggle-input">
+        <label for="signatureToggle" class="toggle-label"></label>
+        <span class="label-text">Signature</span>
       </div>
-    </div>
-  );
-};
-
-export default MyTextEditor;
+      
+</body>
+</html>
