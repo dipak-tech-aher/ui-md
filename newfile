@@ -1,259 +1,244 @@
-import * as React from 'react';
-import { useState, useEffect } from 'react';
-import {
-  MinimalButton,
-  Position,
-  RotateDirection,
-  Tooltip,
-  Viewer,
-  Worker,
-} from '@react-pdf-viewer/core';
-import {
-  defaultLayoutPlugin,
-  ThumbnailIcon,
-} from '@react-pdf-viewer/default-layout';
-import {
-  RotateBackwardIcon,
-  RotateForwardIcon,
-} from '@react-pdf-viewer/rotate';
-import type { RenderThumbnailItemProps } from '@react-pdf-viewer/thumbnail';
-import { thumbnailPlugin } from '@react-pdf-viewer/thumbnail';
+import React, { useState, useEffect, useCallback, useRef } from "react";
+import * as pdfjsLib from "pdfjs-dist/build/pdf";
+import pdfjsWorker from "pdfjs-dist/build/pdf.worker.entry";
+import { DndProvider, useDrag, useDrop } from "react-dnd";
+import { HTML5Backend } from "react-dnd-html5-backend";
+import update from "immutability-helper";
+import './App.css'; // Custom CSS
 
-import UserProfile from '../AccessControl/UserProfile';
-import { baseUrl } from '@src/common/Constants/Constant';
-import { MagnifyingGlass } from 'react-loader-spinner';
+// Set worker globally
+pdfjsLib.GlobalWorkerOptions.workerSrc = pdfjsWorker;
 
-import { DragDropContext, Droppable, Draggable } from 'react-beautiful-dnd';
-
-import '@react-pdf-viewer/core/lib/styles/index.css';
-import '@react-pdf-viewer/default-layout/lib/styles/index.css';
-import styled from 'styled-components';
-
-const PDFViewerContainer = styled.div`
-  position: sticky;
-  top: 0;
-  height: 100vh;
-  z-index: 10;
-  overflow: auto;
-`;
-
-const LoaderOverlay = styled.div`
-  position: absolute;
-  top: 0;
-  left: 0;
-  width: 100%;
-  height: 100%;
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  background-color: rgba(0, 0, 0, 0.7);
-  z-index: 2;
-`;
-
-const LoadingMessage = styled.p`
-  position: absolute;
-  top: 0;
-  left: 0;
-  width: 100%;
-  height: 110%;
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  color: white;
-  z-index: 2;
-`;
-
-const ThumbnailItems = styled.div`
-  cursor: pointer;
-  padding: 0.5rem;
-  width: 100%;
-`;
-
-const ThumbnailActions = styled.div`
-  align-items: center;
-  display: flex;
-  justify-content: center;
-  margin: 0 auto;
-  width: 100px;
-`;
-
-interface PDFViewerProps {
-  file: string;
-}
-
-const reorder = (list, startIndex, endIndex) => {
-  const result = Array.from(list);
-  const [removed] = result.splice(startIndex, 1);
-  result.splice(endIndex, 0, removed);
-  return result;
+const ItemTypes = {
+    PAGE: "page",
 };
 
-const PDFViewer: React.FC<PDFViewerProps> = ({ file }) => {
-  file = `${baseUrl}/api/File/Output/open_file.pdf`;
-  const [pdfData, setPdfData] = useState<any>();
-  const token = UserProfile.getAccessToken();
-  const [loading, setLoading] = useState<boolean>(true);
-  const [pageOrder, setPageOrder] = useState<number[]>([]); // To track page order
+const DraggablePage = ({ pageNumber, index, movePage, pdfDoc, rotatePage, scale, isActive, pageRef }) => {
+    const canvasRef = useRef(null);
+    const renderTaskRef = useRef(null);
+    const [rotation, setRotation] = useState(0);
 
-  useEffect(() => {
-    if (!file) {
-      setLoading(false);
-      setPdfData(null);
-      return;
+    const [{ isDragging }, drag] = useDrag({
+        type: ItemTypes.PAGE,
+        item: { index },
+        collect: (monitor) => ({
+            isDragging: monitor.isDragging(),
+        }),
+    });
+
+    const [, drop] = useDrop({
+        accept: ItemTypes.PAGE,
+        hover: (draggedItem) => {
+            if (draggedItem.index !== index) {
+                movePage(draggedItem.index, index);
+                draggedItem.index = index;
+            }
+        },
+    });
+
+    const renderPage = useCallback(async () => {
+        if (!pdfDoc || !pageNumber || !canvasRef.current) return;
+
+        const canvas = canvasRef.current;
+        const context = canvas.getContext("2d");
+
+        try {
+            const page = await pdfDoc.getPage(pageNumber);
+            const viewport = page.getViewport({ scale: scale, rotation });
+
+            // Set canvas size with device pixel ratio for better clarity
+            const pixelRatio = window.devicePixelRatio || 1;
+            canvas.width = viewport.width * pixelRatio;
+            canvas.height = viewport.height * pixelRatio;
+
+            // Scale the context to account for the pixel ratio
+            context.scale(pixelRatio, pixelRatio);
+
+            if (renderTaskRef.current) {
+                renderTaskRef.current.cancel();
+            }
+
+            renderTaskRef.current = page.render({
+                canvasContext: context,
+                viewport,
+            });
+
+            await renderTaskRef.current.promise;
+        } catch (error) {
+            if (error.name !== 'RenderingCancelledException') {
+                console.error(`Error rendering page ${index + 1}:`, error);
+                alert(`Error rendering page ${index + 1}: ${error.message}`);
+            }
+        }
+    }, [pdfDoc, pageNumber, scale, rotation]);
+
+
+    useEffect(() => {
+        renderPage();
+
+        return () => {
+            if (renderTaskRef.current) {
+                renderTaskRef.current.cancel();
+            }
+        };
+    }, [renderPage]);
+
+    const handleRotate = () => {
+        const newRotation = (rotation + 90) % 360;
+        setRotation(newRotation);
+        rotatePage(index, newRotation);
+    };
+
+    return (
+        <div
+            ref={(node) => {
+                drag(drop(node));
+                pageRef(node); // Set the page ref
+            }}
+            className={`page-container ${isActive ? 'active' : ''}`}
+            style={{ opacity: isDragging ? 0.5 : 1 }}
+        >
+            <div className="page-controls">
+                <button onClick={handleRotate} className="rotate-button">Rotate</button>
+                <span className="page-number">Page {pageNumber}</span>
+            </div>
+            <canvas ref={canvasRef} />
+        </div>
+    );
+};
+
+
+const PDFViewer = ({ pdfUrl }) => {
+    const [pdfDoc, setPdfDoc] = useState(null);
+    const [pageOrder, setPageOrder] = useState([]);
+    const [totalPages, setTotalPages] = useState(0);
+    const [scale, setScale] = useState(1);
+    const [currentPage, setCurrentPage] = useState(1);
+    const [drawerOpen, setDrawerOpen] = useState(false);
+    const pageRefs = useRef([]); // Ref to store references for each page
+
+    useEffect(() => {
+        const loadDocument = async () => {
+            try {
+                const pdf = await pdfjsLib.getDocument(pdfUrl).promise;
+                setPdfDoc(pdf);
+                setTotalPages(pdf.numPages);
+                setPageOrder([...Array(pdf.numPages).keys()].map((i) => i + 1));
+                console.log(`Loaded PDF with ${pdf.numPages} pages.`);
+            } catch (error) {
+                console.error("Error loading PDF:", error);
+                alert(`Error loading PDF: ${error.message}`);
+            }
+        };
+
+        loadDocument();
+    }, [pdfUrl]);
+
+    const movePage = (fromIndex, toIndex) => {
+        const updatedOrder = update(pageOrder, {
+            $splice: [
+                [fromIndex, 1],
+                [toIndex, 0, pageOrder[fromIndex]],
+            ],
+        });
+        setPageOrder(updatedOrder);
+    };
+
+    const rotatePage = (index, rotation) => {
+        // Implement any logic for rotation handling if needed
+    };
+
+    const handleZoomIn = () => {
+        setScale((prevScale) => Math.min(prevScale + 0.1, 4)); // Zoom in by 10%
+    };
+
+    const handleZoomOut = () => {
+        setScale((prevScale) => Math.max(prevScale - 0.1, 0.5)); // Zoom out by 10%
+    };
+
+    const handlePageChange = (e) => {
+        const newPage = Number(e.target.value);
+        if (newPage >= 1 && newPage <= totalPages) {
+            setCurrentPage(newPage);
+            // Scroll to the new current page
+            pageRefs.current[newPage - 1]?.scrollIntoView({ behavior: "smooth" });
+        }
+    };
+
+    const toggleDrawer = () => setDrawerOpen((prev) => !prev);
+
+    // Function to download PDF
+    const handleDownload = () => {
+        const link = document.createElement("a");
+        link.href = pdfUrl;
+        link.download = "downloaded.pdf"; // You can customize the filename here
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+    };
+
+    if (!pdfDoc) {
+        return <div>Loading PDF...</div>;
     }
 
-    setLoading(true);
-    const fetchPDF = async () => {
-      try {
-        const response = await fetch(file, {
-          method: 'GET',
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
-          redirect: 'follow',
-        });
-
-        if (!response.ok) {
-          throw new Error('Network response was not ok.');
-        }
-
-        const blob = await response.blob();
-        const localUrl = URL.createObjectURL(blob);
-        setPdfData(localUrl);
-      } catch (error) {
-        console.error('Error fetching the file:', error);
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    fetchPDF();
-    return () => {
-      if (pdfData) {
-        URL.revokeObjectURL(pdfData);
-      }
-    };
-  }, [file, token]);
-
-  const onDragEnd = (result) => {
-    if (!result.destination) return;
-    const reorderedPages = reorder(pageOrder, result.source.index, result.destination.index);
-    setPageOrder(reorderedPages);
-  };
-
-  const renderThumbnailItem = (props: RenderThumbnailItemProps) => (
-    <Draggable draggableId={`thumbnail-${props.pageIndex}`} index={props.pageIndex} key={props.pageIndex}>
-      {(provided) => (
-        <div
-          ref={provided.innerRef}
-          {...provided.draggableProps}
-          {...provided.dragHandleProps}
-          data-testid={`thumbnail-${props.pageIndex}`}
-        >
-          <ThumbnailItems>
-            <div style={{ marginBottom: '0.5rem' }} onClick={props.onJumpToPage}>
-              {props.renderPageThumbnail}
+    return (
+        <DndProvider backend={HTML5Backend}>
+            <div className="navbar">
+                <button className="hamburger" onClick={toggleDrawer}>☰</button>
+                <div className="navbar-controls">
+                    <button onClick={handleZoomOut}>Zoom Out</button>
+                    <span className="zoom-percentage">{`${Math.round(scale * 100)}%`}</span>
+                    <button onClick={handleZoomIn}>Zoom In</button>
+                    <button onClick={handleDownload} className="download-button">Download PDF</button>
+                    <input
+                        type="number"
+                        value={currentPage}
+                        onChange={handlePageChange}
+                        min="1"
+                        max={totalPages}
+                    />
+                </div>
             </div>
-            <ThumbnailActions>
-              <Tooltip
-                position={Position.BottomCenter}
-                target={
-                  <MinimalButton
-                    testId={`rotate-forward-${props.pageIndex}`}
-                    onClick={() => props.onRotatePage(RotateDirection.Forward)}
-                  >
-                    <RotateForwardIcon />
-                  </MinimalButton>
-                }
-                content={() => 'Rotate clockwise'}
-                offset={TOOLTIP_OFFSET}
-              />
-              <Tooltip
-                position={Position.BottomCenter}
-                target={
-                  <MinimalButton
-                    testId={`rotate-backward-${props.pageIndex}`}
-                    onClick={() => props.onRotatePage(RotateDirection.Backward)}
-                  >
-                    <RotateBackwardIcon />
-                  </MinimalButton>
-                }
-                content={() => 'Rotate counterclockwise'}
-                offset={TOOLTIP_OFFSET}
-              />
-            </ThumbnailActions>
-          </ThumbnailItems>
-        </div>
-      )}
-    </Draggable>
-  );
-
-  const thumbnailPluginInstance = thumbnailPlugin({
-    thumbnailWidth: 150,
-  });
-  const { Thumbnails } = thumbnailPluginInstance;
-
-  const defaultLayoutPluginInstance = defaultLayoutPlugin({
-    sidebarTabs: (defaultTabs) =>
-      [
-        {
-          content: (
-            <DragDropContext onDragEnd={onDragEnd}>
-              <Droppable droppableId="thumbnails">
-                {(provided) => (
-                  <div {...provided.droppableProps} ref={provided.innerRef}>
-                    {pageOrder.map((pageIndex, idx) =>
-                      renderThumbnailItem({
-                        key: `thumbnail-${pageIndex}`,
-                        pageIndex,
-                        currentPage: idx,
-                        onJumpToPage: () => {},
-                        onRotatePage: () => {},
-                        renderPageThumbnail: <div>Page {pageIndex + 1}</div>,
-                      })
-                    )}
-                    {provided.placeholder}
-                  </div>
-                )}
-              </Droppable>
-            </DragDropContext>
-          ),
-          icon: <ThumbnailIcon />,
-          title: 'Thumbnails',
-        },
-      ].concat(defaultTabs.slice(1)),
-  });
-
-  return (
-    <PDFViewerContainer>
-      {loading ? (
-        <LoaderOverlay>
-          <MagnifyingGlass
-            visible={true}
-            height="80"
-            width="80"
-            ariaLabel="magnifying-glass-loading"
-            wrapperStyle={{}}
-            wrapperClass="magnifying-glass-wrapper"
-            glassColor="#c0efff"
-            color="#e15b64"
-          />
-          <LoadingMessage>Loading document...</LoadingMessage>
-        </LoaderOverlay>
-      ) : null}
-      {!loading && pdfData ? (
-        <Worker workerUrl={workerUrl}>
-          <Viewer
-            defaultScale={1}
-            fileUrl={pdfData}
-            plugins={[defaultLayoutPluginInstance, thumbnailPluginInstance]}
-          />
-        </Worker>
-      ) : (
-        !loading && <div>No document to display</div>
-      )}
-    </PDFViewerContainer>
-  );
+            <div className="pdf-viewer-layout">
+                <div className={`drawer ${drawerOpen ? 'open' : 'closed'}`}>
+                    <h3>Page Thumbnails</h3>
+                    {pageOrder.map((pageNumber, index) => (
+                        <div key={pageNumber} className="thumbnail-container">
+                            <DraggablePage
+                                pageNumber={pageNumber}
+                                index={index}
+                                movePage={movePage}
+                                pdfDoc={pdfDoc}
+                                rotatePage={rotatePage}
+                                scale={scale}
+                                isActive={currentPage === pageNumber}
+                                pageRef={(el) => (pageRefs.current[index] = el)} // Assign ref to page
+                            />
+                        </div>
+                    ))}
+                </div>
+                <div className="main-viewer">
+                    {pageOrder.map((pageNumber, index) => (
+                        <DraggablePage
+                            key={pageNumber}
+                            pageNumber={pageNumber}
+                            index={index}
+                            movePage={movePage}
+                            pdfDoc={pdfDoc}
+                            rotatePage={rotatePage}
+                            scale={scale}
+                            isActive={currentPage === pageNumber}
+                            pageRef={(el) => (pageRefs.current[index] = el)} // Assign ref to page
+                        />
+                    ))}
+                </div>
+            </div>
+        </DndProvider>
+    );
 };
+
+
+
+
 
 export default PDFViewer;
