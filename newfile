@@ -23,9 +23,7 @@ import UserProfile from '../AccessControl/UserProfile';
 import { baseUrl } from '@src/common/Constants/Constant';
 import { MagnifyingGlass } from 'react-loader-spinner';
 
-const TOOLTIP_OFFSET = { left: 0, top: 8 };
-const workerUrl =
-  '//cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+import { DragDropContext, Droppable, Draggable } from 'react-beautiful-dnd';
 
 import '@react-pdf-viewer/core/lib/styles/index.css';
 import '@react-pdf-viewer/default-layout/lib/styles/index.css';
@@ -65,13 +63,7 @@ const LoadingMessage = styled.p`
   z-index: 2;
 `;
 
-const ThumbnailItems = styled.div
-  .withConfig({
-    shouldForwardProp: (prop) => !['isActive'].includes(prop),
-  })
-  .attrs({
-    className: 'custom-thumbnail-item',
-  })`
+const ThumbnailItems = styled.div`
   cursor: pointer;
   padding: 0.5rem;
   width: 100%;
@@ -84,14 +76,24 @@ const ThumbnailActions = styled.div`
   margin: 0 auto;
   width: 100px;
 `;
+
 interface PDFViewerProps {
   file: string;
 }
+
+const reorder = (list, startIndex, endIndex) => {
+  const result = Array.from(list);
+  const [removed] = result.splice(startIndex, 1);
+  result.splice(endIndex, 0, removed);
+  return result;
+};
+
 const PDFViewer: React.FC<PDFViewerProps> = ({ file }) => {
   file = `${baseUrl}/api/File/Output/open_file.pdf`;
   const [pdfData, setPdfData] = useState<any>();
   const token = UserProfile.getAccessToken();
   const [loading, setLoading] = useState<boolean>(true);
+  const [pageOrder, setPageOrder] = useState<number[]>([]); // To track page order
 
   useEffect(() => {
     if (!file) {
@@ -133,45 +135,57 @@ const PDFViewer: React.FC<PDFViewerProps> = ({ file }) => {
     };
   }, [file, token]);
 
+  const onDragEnd = (result) => {
+    if (!result.destination) return;
+    const reorderedPages = reorder(pageOrder, result.source.index, result.destination.index);
+    setPageOrder(reorderedPages);
+  };
+
   const renderThumbnailItem = (props: RenderThumbnailItemProps) => (
-    <ThumbnailItems
-      key={props.key}
-      data-testid={`thumbnail-${props.pageIndex}`}
-      onClick={props.onJumpToPage}
-      //   isActive={props.pageIndex === props.currentPage}
-    >
-      <div style={{ marginBottom: '0.5rem' }} onClick={props.onJumpToPage}>
-        {props.renderPageThumbnail}
-      </div>
-      <ThumbnailActions>
-        <Tooltip
-          position={Position.BottomCenter}
-          target={
-            <MinimalButton
-              testId={`rotate-forward-${props.pageIndex}`}
-              onClick={() => props.onRotatePage(RotateDirection.Forward)}
-            >
-              <RotateForwardIcon />
-            </MinimalButton>
-          }
-          content={() => 'Rotate clockwise'}
-          offset={TOOLTIP_OFFSET}
-        />
-        <Tooltip
-          position={Position.BottomCenter}
-          target={
-            <MinimalButton
-              testId={`rotate-backward-${props.pageIndex}`}
-              onClick={() => props.onRotatePage(RotateDirection.Backward)}
-            >
-              <RotateBackwardIcon />
-            </MinimalButton>
-          }
-          content={() => 'Rotate counterclockwise'}
-          offset={TOOLTIP_OFFSET}
-        />
-      </ThumbnailActions>
-    </ThumbnailItems>
+    <Draggable draggableId={`thumbnail-${props.pageIndex}`} index={props.pageIndex} key={props.pageIndex}>
+      {(provided) => (
+        <div
+          ref={provided.innerRef}
+          {...provided.draggableProps}
+          {...provided.dragHandleProps}
+          data-testid={`thumbnail-${props.pageIndex}`}
+        >
+          <ThumbnailItems>
+            <div style={{ marginBottom: '0.5rem' }} onClick={props.onJumpToPage}>
+              {props.renderPageThumbnail}
+            </div>
+            <ThumbnailActions>
+              <Tooltip
+                position={Position.BottomCenter}
+                target={
+                  <MinimalButton
+                    testId={`rotate-forward-${props.pageIndex}`}
+                    onClick={() => props.onRotatePage(RotateDirection.Forward)}
+                  >
+                    <RotateForwardIcon />
+                  </MinimalButton>
+                }
+                content={() => 'Rotate clockwise'}
+                offset={TOOLTIP_OFFSET}
+              />
+              <Tooltip
+                position={Position.BottomCenter}
+                target={
+                  <MinimalButton
+                    testId={`rotate-backward-${props.pageIndex}`}
+                    onClick={() => props.onRotatePage(RotateDirection.Backward)}
+                  >
+                    <RotateBackwardIcon />
+                  </MinimalButton>
+                }
+                content={() => 'Rotate counterclockwise'}
+                offset={TOOLTIP_OFFSET}
+              />
+            </ThumbnailActions>
+          </ThumbnailItems>
+        </div>
+      )}
+    </Draggable>
   );
 
   const thumbnailPluginInstance = thumbnailPlugin({
@@ -183,7 +197,27 @@ const PDFViewer: React.FC<PDFViewerProps> = ({ file }) => {
     sidebarTabs: (defaultTabs) =>
       [
         {
-          content: <Thumbnails renderThumbnailItem={renderThumbnailItem} />,
+          content: (
+            <DragDropContext onDragEnd={onDragEnd}>
+              <Droppable droppableId="thumbnails">
+                {(provided) => (
+                  <div {...provided.droppableProps} ref={provided.innerRef}>
+                    {pageOrder.map((pageIndex, idx) =>
+                      renderThumbnailItem({
+                        key: `thumbnail-${pageIndex}`,
+                        pageIndex,
+                        currentPage: idx,
+                        onJumpToPage: () => {},
+                        onRotatePage: () => {},
+                        renderPageThumbnail: <div>Page {pageIndex + 1}</div>,
+                      })
+                    )}
+                    {provided.placeholder}
+                  </div>
+                )}
+              </Droppable>
+            </DragDropContext>
+          ),
           icon: <ThumbnailIcon />,
           title: 'Thumbnails',
         },
