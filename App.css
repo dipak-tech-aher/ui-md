@@ -1,6 +1,6 @@
 .pdf-viewer-layout {
   display: flex;
-  height: 100vh;
+  max-height: 80vh; 
   flex-direction: row;
   justify-content: center;
   overflow-y: scroll;
@@ -45,7 +45,7 @@
 
 .drawer {
   width: 200px;
-  height: 100vh;
+  max-height: 80vh; 
   background-color: #f0f0f0;
   padding: 10px;
   overflow-y: auto;
@@ -87,4 +87,10 @@ canvas {
 .zoom-percentage {
   margin-left: 10px;
   font-weight: bold;
+}
+
+.main-viewer {
+  max-height: 80vh;  /* Adjust this to your layout */
+  overflow-y: auto;  /* This ensures the container scrolls */
+  position: relative;
 }
