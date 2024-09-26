@@ -426,4 +426,44 @@ const PDFViewer = ({ pdfFile }) => {
     );
 };
 
+
+
+ useEffect(() => {
+        if (pdfDoc) {
+            const observer = new IntersectionObserver(
+                (entries) => {
+                    entries.forEach((entry) => {
+                        if (entry.isIntersecting) {
+                            const visiblePageIndex = pageRefs.current.indexOf(entry.target);
+                            if (visiblePageIndex !== -1) {
+                                const visiblePageNumber = pageOrder[visiblePageIndex];
+                                setCurrentPage(visiblePageNumber); // Update currentPage when the page is visible
+                            }
+                        }
+                    });
+                },
+                {
+                    root: null, // Use the viewport as the root
+                    rootMargin: '0px',
+                    threshold: 0.5, // Trigger when 50% of the page is visible
+                }
+            );
+
+            // Observe each page
+            pageRefs.current.forEach((pageRef) => {
+                if (pageRef) observer.observe(pageRef);
+            });
+
+            // Clean up the observer on component unmount
+            return () => {
+                if (observer) {
+                    pageRefs.current.forEach((pageRef) => {
+                        if (pageRef) observer.unobserve(pageRef);
+                    });
+                }
+            };
+        }
+    }, [pdfDoc, pageOrder]);
+
+
 export default PDFViewer;
