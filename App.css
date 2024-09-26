@@ -1,0 +1,90 @@
+.pdf-viewer-layout {
+  display: flex;
+  height: 100vh;
+  flex-direction: row;
+  justify-content: center;
+  overflow-y: scroll;
+}
+
+.navbar {
+  background-color: #333;
+  color: white;
+  padding: 10px;
+  display: flex;
+  position: sticky;
+  top: 0;
+  z-index: 10;
+  align-items: center;
+  justify-content: center;
+  flex-direction: row;
+}
+
+.hamburger {
+  background: none;
+  border: none;
+  color: white;
+  font-size: 24px;
+  cursor: pointer;
+}
+
+.navbar-controls {
+  display: flex;
+  align-items: center;
+}
+
+.navbar-controls button,
+.rotate-button {
+  margin-left: 10px;
+  padding: 5px 10px;
+  cursor: pointer;
+  background-color: #007bff;
+  color: white;
+  border: none;
+  border-radius: 5px;
+}
+
+.drawer {
+  width: 200px;
+  height: 100vh;
+  background-color: #f0f0f0;
+  padding: 10px;
+  overflow-y: auto;
+  transition: width 0.3s ease-in-out;
+}
+
+.drawer.closed {
+  width: 0;
+  padding: 0;
+  overflow: hidden;
+}
+
+.page-container {
+  margin-bottom: 20px;
+  cursor: move;
+  border: 1px solid #ddd;
+  padding: 10px;
+  background-color: #fff;
+  position: relative; /* Added to position the controls */
+}
+
+.thumbnail-container {
+  cursor: pointer;
+  margin-bottom: 15px;
+}
+
+canvas {
+  width: 100%;
+  height: auto;
+}
+
+.page-controls {
+  display: flex;
+  justify-content: flex-end;
+  margin-bottom: 10px;
+}
+
+
+.zoom-percentage {
+  margin-left: 10px;
+  font-weight: bold;
+}
