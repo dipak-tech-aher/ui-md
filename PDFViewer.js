@@ -14,10 +14,9 @@ const ItemTypes = {
     PAGE: "page",
 };
 
-const DraggablePage = ({ pageNumber, index, movePage, pdfDoc, rotatePage, scale, isActive, pageRef }) => {
+const DraggablePage = ({ pageNumber, index, movePage, pdfDoc, rotatePage, scale, isActive, pageRef, rotation }) => {
     const canvasRef = useRef(null);
     const renderTaskRef = useRef(null);
-    const [rotation, setRotation] = useState(0);
 
     const [{ isDragging }, drag] = useDrag({
         type: ItemTypes.PAGE,
@@ -47,12 +46,10 @@ const DraggablePage = ({ pageNumber, index, movePage, pdfDoc, rotatePage, scale,
             const page = await pdfDoc.getPage(pageNumber);
             const viewport = page.getViewport({ scale: scale, rotation });
 
-            // Set canvas size with device pixel ratio for better clarity
             const pixelRatio = window.devicePixelRatio || 1;
             canvas.width = viewport.width * pixelRatio;
             canvas.height = viewport.height * pixelRatio;
 
-            // Scale the context to account for the pixel ratio
             context.scale(pixelRatio, pixelRatio);
 
             if (renderTaskRef.current) {
@@ -73,10 +70,8 @@ const DraggablePage = ({ pageNumber, index, movePage, pdfDoc, rotatePage, scale,
         }
     }, [pdfDoc, pageNumber, scale, rotation]);
 
-
     useEffect(() => {
         renderPage();
-
         return () => {
             if (renderTaskRef.current) {
                 renderTaskRef.current.cancel();
@@ -84,10 +79,14 @@ const DraggablePage = ({ pageNumber, index, movePage, pdfDoc, rotatePage, scale,
         };
     }, [renderPage]);
 
-    const handleRotate = () => {
+    const handleRotateClockwise = () => {
         const newRotation = (rotation + 90) % 360;
-        setRotation(newRotation);
-        rotatePage(index, newRotation);
+        rotatePage(index, newRotation); // Update global rotation state
+    };
+
+    const handleRotateAnticlockwise = () => {
+        const newRotation = (rotation - 90 + 360) % 360;
+        rotatePage(index, newRotation); // Update global rotation state
     };
 
     return (
@@ -100,13 +99,16 @@ const DraggablePage = ({ pageNumber, index, movePage, pdfDoc, rotatePage, scale,
             style={{ opacity: isDragging ? 0.5 : 1 }}
         >
             <div className="page-controls">
-                <button onClick={handleRotate} className="rotate-button">Rotate</button>
+                <button onClick={handleRotateClockwise} className="rotate-button">Rotate ↻</button>
+                <button onClick={handleRotateAnticlockwise} className="rotate-button">Rotate ↺</button>
                 <span className="page-number">Page {pageNumber}</span>
             </div>
             <canvas ref={canvasRef} />
         </div>
     );
 };
+
+
 
 const PDFViewer = ({ pdfFile }) => {
     const [rotationPerPage, setRotationPerPage] = useState({});
@@ -126,7 +128,6 @@ const PDFViewer = ({ pdfFile }) => {
     const [currentPage, setCurrentPage] = useState(1);
     const [drawerOpen, setDrawerOpen] = useState(false);
     const pageRefs = useRef([]); // Ref to store references for each page
-
 
     const loadPdfDocument = async (pdfFileOrUrl) => {
         try {
@@ -319,7 +320,6 @@ const PDFViewer = ({ pdfFile }) => {
         }
     };
 
-
     const goToNextPage = () => {
         const currentPageIndex = pageOrder.indexOf(currentPage);
         if (currentPageIndex < totalPages - 1) {
@@ -357,6 +357,42 @@ const PDFViewer = ({ pdfFile }) => {
         }
     };
 
+    useEffect(() => {
+        if (pdfDoc) {
+            const observer = new IntersectionObserver(
+                (entries) => {
+                    entries.forEach((entry) => {
+                        if (entry.isIntersecting) {
+                            const visiblePageIndex = pageRefs.current.indexOf(entry.target);
+                            if (visiblePageIndex !== -1) {
+                                const visiblePageNumber = pageOrder[visiblePageIndex];
+                                setCurrentPage(visiblePageNumber); // Update currentPage when the page is visible
+                            }
+                        }
+                    });
+                },
+                {
+                    root: null, // Use the viewport as the root
+                    rootMargin: '0px',
+                    threshold: 0.5, // Trigger when 50% of the page is visible
+                }
+            );
+
+            // Observe each page
+            pageRefs.current.forEach((pageRef) => {
+                if (pageRef) observer.observe(pageRef);
+            });
+
+            // Clean up the observer on component unmount
+            return () => {
+                if (observer) {
+                    pageRefs.current.forEach((pageRef) => {
+                        if (pageRef) observer.unobserve(pageRef);
+                    });
+                }
+            };
+        }
+    }, [pdfDoc, pageOrder]);
 
     if (!pdfDoc) {
         return <div>Loading PDF...</div>;
@@ -401,6 +437,7 @@ const PDFViewer = ({ pdfFile }) => {
                                 rotatePage={rotatePage}
                                 scale={scale}
                                 isActive={currentPage === pageNumber}
+                                rotation={rotationPerPage[index] || 0}  // Pass the rotation from state
                                 pageRef={(el) => (pageRefs.current[index] = el)} // Assign ref to page
                             />
                         </div>
@@ -417,53 +454,15 @@ const PDFViewer = ({ pdfFile }) => {
                             rotatePage={rotatePage}
                             scale={scale}
                             isActive={currentPage === pageNumber}
+                            rotation={rotationPerPage[index] || 0}  // Pass the rotation from state
                             pageRef={(el) => (pageRefs.current[index] = el)} // Assign ref to page
                         />
                     ))}
                 </div>
             </div>
+
         </DndProvider>
     );
 };
-
-
-
- useEffect(() => {
-        if (pdfDoc) {
-            const observer = new IntersectionObserver(
-                (entries) => {
-                    entries.forEach((entry) => {
-                        if (entry.isIntersecting) {
-                            const visiblePageIndex = pageRefs.current.indexOf(entry.target);
-                            if (visiblePageIndex !== -1) {
-                                const visiblePageNumber = pageOrder[visiblePageIndex];
-                                setCurrentPage(visiblePageNumber); // Update currentPage when the page is visible
-                            }
-                        }
-                    });
-                },
-                {
-                    root: null, // Use the viewport as the root
-                    rootMargin: '0px',
-                    threshold: 0.5, // Trigger when 50% of the page is visible
-                }
-            );
-
-            // Observe each page
-            pageRefs.current.forEach((pageRef) => {
-                if (pageRef) observer.observe(pageRef);
-            });
-
-            // Clean up the observer on component unmount
-            return () => {
-                if (observer) {
-                    pageRefs.current.forEach((pageRef) => {
-                        if (pageRef) observer.unobserve(pageRef);
-                    });
-                }
-            };
-        }
-    }, [pdfDoc, pageOrder]);
-
 
 export default PDFViewer;
