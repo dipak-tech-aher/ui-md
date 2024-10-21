@@ -1,43 +1,3 @@
- const renderPage = useCallback(async () => {
-        if (!pdfDoc || !pageNumber || !canvasRef.current) return;
-    
-        const canvas = canvasRef.current;
-        const context = canvas.getContext("2d");
-    
-        try {
-            const page = await pdfDoc.getPage(pageNumber);
-            const pageRotation = page.rotate; // Get the default rotation from the PDF metadata
-            const combinedRotation = (rotation + pageRotation) % 360; // Combine default rotation with custom rotation
-            const viewport = page.getViewport({ scale, rotation: combinedRotation });
-    
-            canvas.width = viewport.width * window.devicePixelRatio;
-            canvas.height = viewport.height * window.devicePixelRatio;
-            canvas.style.width = `${viewport.width}px`;
-            canvas.style.height = `${viewport.height}px`;
-    
-            context.scale(window.devicePixelRatio, window.devicePixelRatio);
-    
-            if (renderTaskRef.current) {
-                renderTaskRef.current.cancel();
-            }
-    
-            renderTaskRef.current = page.render({
-                canvasContext: context,
-                viewport,
-            });
-    
-            await renderTaskRef.current.promise;
-        } catch (error) {
-            if (error.name !== 'RenderingCancelledException') {
-                console.error(`Error rendering page ${index + 1}:`, error);
-                alert(`Error rendering page ${index + 1}: ${error.message}`);
-            }
-        }
-    }, [pdfDoc, pageNumber, scale, rotation]);
-
-
-
-
 const handleDownload = async () => {
     if (!pdfDoc) return;
 
@@ -55,14 +15,22 @@ const handleDownload = async () => {
 
         const newPdfBytes = await newPdfDoc.save();
         const blob = new Blob([newPdfBytes], { type: "application/pdf" });
-        const url = URL.createObjectURL(blob);
+        
+        // Revoke the old URL to avoid memory leaks
+        if (pdfUrl) {
+            URL.revokeObjectURL(pdfUrl);
+        }
+
+        const newUrl = URL.createObjectURL(blob);
+        setPdfUrl(newUrl); // Update the PDF URL with the newly generated Blob
+        
         const link = document.createElement("a");
-        link.href = url;
+        link.href = newUrl;
         link.download = "updated.pdf";
         document.body.appendChild(link);
         link.click();
         document.body.removeChild(link);
-        URL.revokeObjectURL(url);
+        URL.revokeObjectURL(newUrl);
     } catch (error) {
         console.error("Error downloading PDF:", error);
         alert(`Error downloading PDF: ${error.message}`);
@@ -70,93 +38,79 @@ const handleDownload = async () => {
 };
 
 
-
 useEffect(() => {
-    if (pdfDoc) {
-        (async () => {
-            const page = await pdfDoc.getPage(1); // Test with the first page or any specific page
-            console.log("Initial rotation of the page:", page.rotate);
-        })();
+    if (pdfUrl) {
+        loadPdfDocument(pdfUrl); // Re-fetch and load the updated PDF
     }
-}, [pdfDoc]);
+}, [pdfUrl]); // Re-run this effect when pdfUrl changes
 
 
+const renderPage = useCallback(async () => {
+    if (!pdfDoc || !pageNumber || !canvasRef.current) return;
 
+    const canvas = canvasRef.current;
+    const context = canvas.getContext("2d");
 
+    try {
+        const page = await pdfDoc.getPage(pageNumber);
 
+        // Get the default rotation from the PDF metadata and combine with current rotation
+        const pageRotation = page.rotate; // Default rotation from PDF metadata
+        const combinedRotation = (rotation + pageRotation) % 360; // Custom rotation
 
-  const handleSaveToServer = async () => {
-        if (!pdfDoc) return;
-    
-        try {
-            // Fetch the original PDF document as a binary array
-            const pdfBytes = await fetch(pdfUrl).then((res) => res.arrayBuffer());
-    
-            // Load the PDF using pdf-lib
-            const originalPdfDoc = await PDFDocument.load(pdfBytes);
-    
-            // Create a new PDF document to hold the rearranged pages
-            const newPdfDoc = await PDFDocument.create();
-    
-            // Loop through the reordered pages
-            for (const pageNumber of pageOrder) {
-                const [copiedPage] = await newPdfDoc.copyPages(originalPdfDoc, [pageNumber - 1]);
-    
-                // Retrieve rotation for each page
-                const pageRotation = (rotationPerPage[pageNumber - 1] || 0) + copiedPage.getRotation().angle;
-    
-                // Apply rotation using pdf-lib's `degrees` function
-                copiedPage.setRotation(degrees(pageRotation));
-    
-                // Add the copied and possibly rotated page to the new PDF
-                newPdfDoc.addPage(copiedPage);
-            }
-    
-            // Save the newly created PDF
-            const newPdfBytes = await newPdfDoc.save();
-    
-            // Convert the bytes to a Blob
-            const blob = new Blob([newPdfBytes], { type: "application/pdf" });
-    
-            // Convert the Blob to a base64 string
-            const reader = new FileReader();
-            reader.readAsDataURL(blob);
-            reader.onloadend = () => {
-                const base64data = reader.result.split(',')[1]; // Get the base64 string
-    
-                // Call API to save base64 PDF to the server
-                savePdfToServer(base64data);
-            };
-        } catch (error) {
-            console.error("Error saving PDF to server:", error);
-            alert(`Error saving PDF to server: ${error.message}`);
+        // Get the viewport with applied scale and rotation
+        const viewport = page.getViewport({ scale, rotation: combinedRotation });
+
+        // Adjust the canvas size based on the viewport
+        canvas.width = viewport.width * window.devicePixelRatio;
+        canvas.height = viewport.height * window.devicePixelRatio;
+        canvas.style.width = `${viewport.width}px`;
+        canvas.style.height = `${viewport.height}px`;
+
+        // Scale context for high-res rendering
+        context.setTransform(window.devicePixelRatio, 0, 0, window.devicePixelRatio, 0, 0);
+
+        // Cancel any previous rendering task before rendering a new one
+        if (renderTaskRef.current) {
+            renderTaskRef.current.cancel();
         }
-    };
-    
-    // Function to send the base64 string to the server
-    const savePdfToServer = async (base64data) => {
-        try {
 
-            console.log('base64data-------------->',base64data)
-            // const response = await fetch('https://your-api-endpoint.com/upload', {
-            //     method: 'POST',
-            //     headers: {
-            //         'Content-Type': 'application/json',
-            //     },
-            //     body: JSON.stringify({
-            //         pdfData: base64data, // Sending the base64 string
-            //         fileName: 'updated.pdf',
-            //     }),
-            // });
-    
-            // if (!response.ok) {
-            //     throw new Error(`Failed to upload PDF: ${response.statusText}`);
-            // }
-    
-            // const result = await response.json();
-            // alert(`PDF saved successfully: ${result.message}`);
-        } catch (error) {
-            console.error('Error uploading PDF:', error);
-            alert(`Error uploading PDF: ${error.message}`);
+        // Render the page on the canvas
+        renderTaskRef.current = page.render({
+            canvasContext: context,
+            viewport,
+        });
+
+        await renderTaskRef.current.promise;
+    } catch (error) {
+        if (error.name !== 'RenderingCancelledException') {
+            console.error(`Error rendering page ${index + 1}:`, error);
+            alert(`Error rendering page ${index + 1}: ${error.message}`);
         }
-    };
+    }
+}, [pdfDoc, pageNumber, scale, rotation]);
+
+
+const loadPdfDocument = async (pdfFileOrUrl) => {
+    try {
+        let pdf;
+        if (typeof pdfFileOrUrl === "string") {
+            // Load from URL
+            pdf = await pdfjsLib.getDocument(pdfFileOrUrl).promise;
+        } else {
+            // Load from Blob (file upload)
+            const arrayBuffer = await pdfFileOrUrl.arrayBuffer();
+            pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
+        }
+
+        setPdfDoc(pdf); // Set the loaded PDF document
+        setTotalPages(pdf.numPages); // Get the total number of pages in the document
+        setPageOrder([...Array(pdf.numPages).keys()].map((i) => i + 1)); // Initialize the page order
+        setCurrentPage(1); // Set the current page to the first page
+
+        console.log(`Loaded PDF with ${pdf.numPages} pages.`);
+    } catch (error) {
+        console.error("Error loading PDF:", error);
+        alert(`Error loading PDF: ${error.message}`);
+    }
+};
