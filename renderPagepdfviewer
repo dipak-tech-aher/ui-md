@@ -80,3 +80,83 @@ useEffect(() => {
     }
 }, [pdfDoc]);
 
+
+
+
+
+
+  const handleSaveToServer = async () => {
+        if (!pdfDoc) return;
+    
+        try {
+            // Fetch the original PDF document as a binary array
+            const pdfBytes = await fetch(pdfUrl).then((res) => res.arrayBuffer());
+    
+            // Load the PDF using pdf-lib
+            const originalPdfDoc = await PDFDocument.load(pdfBytes);
+    
+            // Create a new PDF document to hold the rearranged pages
+            const newPdfDoc = await PDFDocument.create();
+    
+            // Loop through the reordered pages
+            for (const pageNumber of pageOrder) {
+                const [copiedPage] = await newPdfDoc.copyPages(originalPdfDoc, [pageNumber - 1]);
+    
+                // Retrieve rotation for each page
+                const pageRotation = (rotationPerPage[pageNumber - 1] || 0) + copiedPage.getRotation().angle;
+    
+                // Apply rotation using pdf-lib's `degrees` function
+                copiedPage.setRotation(degrees(pageRotation));
+    
+                // Add the copied and possibly rotated page to the new PDF
+                newPdfDoc.addPage(copiedPage);
+            }
+    
+            // Save the newly created PDF
+            const newPdfBytes = await newPdfDoc.save();
+    
+            // Convert the bytes to a Blob
+            const blob = new Blob([newPdfBytes], { type: "application/pdf" });
+    
+            // Convert the Blob to a base64 string
+            const reader = new FileReader();
+            reader.readAsDataURL(blob);
+            reader.onloadend = () => {
+                const base64data = reader.result.split(',')[1]; // Get the base64 string
+    
+                // Call API to save base64 PDF to the server
+                savePdfToServer(base64data);
+            };
+        } catch (error) {
+            console.error("Error saving PDF to server:", error);
+            alert(`Error saving PDF to server: ${error.message}`);
+        }
+    };
+    
+    // Function to send the base64 string to the server
+    const savePdfToServer = async (base64data) => {
+        try {
+
+            console.log('base64data-------------->',base64data)
+            // const response = await fetch('https://your-api-endpoint.com/upload', {
+            //     method: 'POST',
+            //     headers: {
+            //         'Content-Type': 'application/json',
+            //     },
+            //     body: JSON.stringify({
+            //         pdfData: base64data, // Sending the base64 string
+            //         fileName: 'updated.pdf',
+            //     }),
+            // });
+    
+            // if (!response.ok) {
+            //     throw new Error(`Failed to upload PDF: ${response.statusText}`);
+            // }
+    
+            // const result = await response.json();
+            // alert(`PDF saved successfully: ${result.message}`);
+        } catch (error) {
+            console.error('Error uploading PDF:', error);
+            alert(`Error uploading PDF: ${error.message}`);
+        }
+    };
