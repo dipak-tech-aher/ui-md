@@ -1,0 +1,36 @@
+ const renderPage = useCallback(async () => {
+        if (!pdfDoc || !pageNumber || !canvasRef.current) return;
+    
+        const canvas = canvasRef.current;
+        const context = canvas.getContext("2d");
+    
+        try {
+            const page = await pdfDoc.getPage(pageNumber);
+            const pageRotation = page.rotate; // Get the default rotation from the PDF metadata
+            const combinedRotation = (rotation + pageRotation) % 360; // Combine default rotation with custom rotation
+            const viewport = page.getViewport({ scale, rotation: combinedRotation });
+    
+            canvas.width = viewport.width * window.devicePixelRatio;
+            canvas.height = viewport.height * window.devicePixelRatio;
+            canvas.style.width = `${viewport.width}px`;
+            canvas.style.height = `${viewport.height}px`;
+    
+            context.scale(window.devicePixelRatio, window.devicePixelRatio);
+    
+            if (renderTaskRef.current) {
+                renderTaskRef.current.cancel();
+            }
+    
+            renderTaskRef.current = page.render({
+                canvasContext: context,
+                viewport,
+            });
+    
+            await renderTaskRef.current.promise;
+        } catch (error) {
+            if (error.name !== 'RenderingCancelledException') {
+                console.error(`Error rendering page ${index + 1}:`, error);
+                alert(`Error rendering page ${index + 1}: ${error.message}`);
+            }
+        }
+    }, [pdfDoc, pageNumber, scale, rotation]);
