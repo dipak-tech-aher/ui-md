@@ -34,3 +34,49 @@
             }
         }
     }, [pdfDoc, pageNumber, scale, rotation]);
+
+
+
+
+const handleDownload = async () => {
+    if (!pdfDoc) return;
+
+    try {
+        const pdfBytes = await fetch(pdfUrl).then((res) => res.arrayBuffer());
+        const originalPdfDoc = await PDFDocument.load(pdfBytes);
+        const newPdfDoc = await PDFDocument.create();
+
+        for (const pageNumber of pageOrder) {
+            const [copiedPage] = await newPdfDoc.copyPages(originalPdfDoc, [pageNumber - 1]);
+            const pageRotation = (rotationPerPage[pageNumber - 1] || 0) + copiedPage.getRotation().angle;
+            copiedPage.setRotation(degrees(pageRotation));
+            newPdfDoc.addPage(copiedPage);
+        }
+
+        const newPdfBytes = await newPdfDoc.save();
+        const blob = new Blob([newPdfBytes], { type: "application/pdf" });
+        const url = URL.createObjectURL(blob);
+        const link = document.createElement("a");
+        link.href = url;
+        link.download = "updated.pdf";
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        URL.revokeObjectURL(url);
+    } catch (error) {
+        console.error("Error downloading PDF:", error);
+        alert(`Error downloading PDF: ${error.message}`);
+    }
+};
+
+
+
+useEffect(() => {
+    if (pdfDoc) {
+        (async () => {
+            const page = await pdfDoc.getPage(1); // Test with the first page or any specific page
+            console.log("Initial rotation of the page:", page.rotate);
+        })();
+    }
+}, [pdfDoc]);
+
