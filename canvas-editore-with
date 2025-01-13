@@ -9,14 +9,11 @@ const CanvasDesigner = () => {
     const [toolbarPosition, setToolbarPosition] = useState({ x: 0, y: 0 });
     const [selectedCell, setSelectedCell] = useState(null);
     const [dropdownOptions, setDropdownOptions] = useState("");
-
+    const [isEditing, setIsEditing] = useState(false);
     const [cursorRange, setCursorRange] = useState(null); // To save the cursor range
     const [dropdownOptionsInput, setDropdownOptionsInput] = useState(""); // For options input
     const contentEditableRef = useRef(null);
     const selectedDropdownRef = useRef(null); // To track the selected dropdown
-
-    const options = ["Option 1", "Option 2", "Option 3"];
-
 
     const handleDrop = (e) => {
         e.preventDefault();
@@ -36,7 +33,7 @@ const CanvasDesigner = () => {
                 x,
                 y,
                 width: type === "table" ? 200 : type === "checkbox" ? 20 : 100,
-                height: type === "table" ? 100 : type === "checkbox" ? 20 : 50,
+                height: type === "table" ? 71 : type === "checkbox" ? 20 : 50,
                 content: type === "text" ? "Edit me" : "",
                 rows: 2,
                 cols: 2,
@@ -82,11 +79,12 @@ const CanvasDesigner = () => {
     };
 
     const handleUpdateConfig = (field, value) => {
-        setElements((prev) =>
-            prev.map((el) =>
+        setElements((prevElements) =>
+            prevElements.map((el) =>
                 el.id === selectedElementId ? { ...el, [field]: value } : el
             )
         );
+        updateLayout(); // Trigger layout recalculation
     };
 
     const generateHTML = () => {
@@ -125,18 +123,6 @@ const CanvasDesigner = () => {
 
     const selectedElement = elements.find((el) => el.id === selectedElementId);
 
-    // Toolbar code
-
-    const handleRemoveElement = () => {
-        if (selectedElementId) {
-            setElements((prev) => prev.filter((el) => el.id !== selectedElementId));
-            setShowToolbar(false);
-            setSelectedElementId(null);
-        }
-    };
-
-
-
     const handleDropdownSelection = (e) => {
         if (e.target.tagName === "SELECT") {
             selectedDropdownRef.current = e.target; // Track the selected dropdown
@@ -153,81 +139,36 @@ const CanvasDesigner = () => {
         }
     };
 
-    const handleInsertDropdown = () => {
-        if (cursorRange && contentEditableRef.current) {
-            const optionsArray = dropdownOptionsInput
-                .split(",")
-                .map((opt) => opt.trim())
-                .filter((opt) => opt); // Parse options from input
-
-            const selectElement = document.createElement("select");
-            selectElement.contentEditable = "false"; // Prevent editing the dropdown itself
-            selectElement.style.margin = "0 5px";
-            selectElement.style.display = "inline-block";
-            selectElement.style.verticalAlign = "middle";
-
-            // Add options to the dropdown
-            optionsArray.forEach((option) => {
-                const optionElement = document.createElement("option");
-                optionElement.value = option;
-                optionElement.textContent = option;
-                selectElement.appendChild(optionElement);
-            });
-
-            cursorRange.insertNode(selectElement);
-            console.log('selectElement---->', selectElement)
-            // Move the cursor to the end of the inserted dropdown
-            const newRange = document.createRange();
-            newRange.setStartAfter(selectElement);
-            newRange.setEndAfter(selectElement);
-            const selection = window.getSelection();
-            selection.removeAllRanges();
-            selection.addRange(newRange);
-
-            // Reset input
-            setDropdownOptionsInput("");
-        }
+    const updateLayout = () => {
+        let currentY = 0; // Start layout from the top
+        setElements((prevElements) =>
+            prevElements.map((el) => {
+                const updatedElement = {
+                    ...el,
+                    y: currentY,
+                };
+                currentY += el.height + 10; // Add a gap between elements
+                return updatedElement;
+            })
+        );
     };
 
-    const handleUpdateDropdown = () => {
-        const selectedDropdown = selectedDropdownRef.current;
-
-        if (selectedDropdown && selectedDropdown.tagName === "SELECT") {
-            const optionsArray = dropdownOptionsInput
-                .split(",")
-                .map((opt) => opt.trim())
-                .filter((opt) => opt);
-
-            // Clear existing options
-            selectedDropdown.innerHTML = "";
-
-            // Add new options
-            optionsArray.forEach((option) => {
-                const optionElement = document.createElement("option");
-                optionElement.value = option;
-                optionElement.textContent = option;
-                selectedDropdown.appendChild(optionElement);
-            });
-
-            // Reset input
-            setDropdownOptionsInput("");
-        } else {
-            alert("Please select a dropdown to update.");
-        }
-    };
-
-    const handleTextFormat = (command) => {
-        document.execCommand(command, false, null);
-    };
-
-
-    const [isEditing, setIsEditing] = useState(false);
 
     // Function to update the state and sync content
     const syncContentToState = () => {
         const content = contentEditableRef.current?.textContent || "";
-        console.log('content---->', content)
-       
+        setElements((prevElements) =>
+            prevElements.map((el) =>
+                el.id === selectedElementId
+                    ? {
+                        ...el,
+                        content,
+                        height: contentEditableRef.current?.scrollHeight || el.height, // Dynamically update height
+                    }
+                    : el
+            )
+        );
+        updateLayout(); // Recalculate layout
     };
 
     // Preserve cursor position during updates
@@ -249,42 +190,6 @@ const CanvasDesigner = () => {
         setIsEditing(false);
         syncContentToState(); // Sync content with state on blur
     };
-
-    const insertDropdown = () => {
-        if (!selectedCell || !selectedElementId) {
-            alert("Please select a cell to insert a dropdown.");
-            return;
-        }
-
-        if (!dropdownOptions.trim()) {
-            alert("Please enter options for the dropdown.");
-            return;
-        }
-
-        const optionsArray = dropdownOptions.split(",").map((opt) => opt.trim());
-        const dropdownHTML = `
-            <select>
-                ${optionsArray.map((opt) => `<option value="${opt}">${opt}</option>`).join("")}
-            </select>`;
-        const { rowIdx, colIdx } = selectedCell;
-
-        setElements((prev) =>
-            prev.map((el) => {
-                if (el.id === selectedElementId && el.type === "table") {
-                    const updatedTableData = el.tableData.map((row, rIdx) =>
-                        rIdx === rowIdx
-                            ? row.map((cell, cIdx) => (cIdx === colIdx ? dropdownHTML : cell))
-                            : row
-                    );
-                    return { ...el, tableData: updatedTableData };
-                }
-                return el;
-            })
-        );
-
-        setDropdownOptions(""); // Clear the input field after insertion
-    };
-
 
     const handleSelectCell = (e, elementId, rowIdx, colIdx) => {
         e.stopPropagation(); // Prevent canvas click events from resetting selection
@@ -324,6 +229,118 @@ const CanvasDesigner = () => {
         );
     };
 
+    // Toolbar code
+
+    const handleRemoveElement = () => {
+        if (selectedElementId) {
+            setElements((prev) => prev.filter((el) => el.id !== selectedElementId));
+            setShowToolbar(false);
+            setSelectedElementId(null);
+        }
+    };
+
+    const handleTextFormat = (command) => {
+        document.execCommand(command, false, null);
+    };
+
+    const insertDropdown = () => {
+        if (!selectedCell || !selectedElementId) {
+            alert("Please select a cell to insert a dropdown.");
+            return;
+        }
+
+        if (!dropdownOptions.trim()) {
+            alert("Please enter options for the dropdown.");
+            return;
+        }
+
+        const optionsArray = dropdownOptions.split(",").map((opt) => opt.trim());
+        const dropdownHTML = `
+            <select>
+                ${optionsArray.map((opt) => `<option value="${opt}">${opt}</option>`).join("")}
+            </select>`;
+        const { rowIdx, colIdx } = selectedCell;
+
+        setElements((prev) =>
+            prev.map((el) => {
+                if (el.id === selectedElementId && el.type === "table") {
+                    const updatedTableData = el.tableData.map((row, rIdx) =>
+                        rIdx === rowIdx
+                            ? row.map((cell, cIdx) => (cIdx === colIdx ? dropdownHTML : cell))
+                            : row
+                    );
+                    return { ...el, tableData: updatedTableData };
+                }
+                return el;
+            })
+        );
+
+        setDropdownOptions(""); // Clear the input field after insertion
+    };
+
+    const handleUpdateDropdown = () => {
+        const selectedDropdown = selectedDropdownRef.current;
+
+        if (selectedDropdown && selectedDropdown.tagName === "SELECT") {
+            const optionsArray = dropdownOptionsInput
+                .split(",")
+                .map((opt) => opt.trim())
+                .filter((opt) => opt);
+
+            // Clear existing options
+            selectedDropdown.innerHTML = "";
+
+            // Add new options
+            optionsArray.forEach((option) => {
+                const optionElement = document.createElement("option");
+                optionElement.value = option;
+                optionElement.textContent = option;
+                selectedDropdown.appendChild(optionElement);
+            });
+
+            // Reset input
+            setDropdownOptionsInput("");
+        } else {
+            alert("Please select a dropdown to update.");
+        }
+    };
+
+    const handleInsertDropdown = () => {
+        if (cursorRange && contentEditableRef.current) {
+            const optionsArray = dropdownOptionsInput
+                .split(",")
+                .map((opt) => opt.trim())
+                .filter((opt) => opt); // Parse options from input
+
+            const selectElement = document.createElement("select");
+            selectElement.contentEditable = "false"; // Prevent editing the dropdown itself
+            selectElement.style.margin = "0 5px";
+            selectElement.style.display = "inline-block";
+            selectElement.style.verticalAlign = "middle";
+
+            // Add options to the dropdown
+            optionsArray.forEach((option) => {
+                const optionElement = document.createElement("option");
+                optionElement.value = option;
+                optionElement.textContent = option;
+                selectElement.appendChild(optionElement);
+            });
+
+            cursorRange.insertNode(selectElement);
+            console.log('selectElement---->', selectElement)
+            // Move the cursor to the end of the inserted dropdown
+            const newRange = document.createRange();
+            newRange.setStartAfter(selectElement);
+            newRange.setEndAfter(selectElement);
+            const selection = window.getSelection();
+            selection.removeAllRanges();
+            selection.addRange(newRange);
+
+            // Reset input
+            setDropdownOptionsInput("");
+        }
+    };
+    
     return (
         <div style={{ display: "flex", gap: "20px" }}>
             <div style={{ width: "200px", border: "1px solid #ccc", padding: "10px" }}>
@@ -362,6 +379,22 @@ const CanvasDesigner = () => {
                                         )
                                     );
                                 }}
+                            />
+                        </label>
+                        <label>
+                            Margin:
+                            <input
+                                type="number"
+                                value={selectedElement.margin ?? 0}
+                                onChange={(e) => handleUpdateConfig("margin", parseInt(e.target.value) || 0)}
+                            />
+                        </label>
+                        <label>
+                            Padding:
+                            <input
+                                type="number"
+                                value={selectedElement.padding ?? 0}
+                                onChange={(e) => handleUpdateConfig("padding", parseInt(e.target.value) || 0)}
                             />
                         </label>
                     </>
@@ -411,12 +444,18 @@ const CanvasDesigner = () => {
                             style={{
                                 position: "absolute",
                                 left: el.x,
-                                top: el.y,
+                                top: el.y, // Use `y` from dynamic layout
                                 width: el.width,
-                                height: el.type === "text" ? 'auto' : el.height,
-                                border: el.type === "text" ? "1px dashed #333" : "none",
                                 backgroundColor: el.backgroundColor,
                                 cursor: "move",
+                                // position: "absolute",
+                                // left: el.x,
+                                // top: el.y,
+                                // width: el.width,
+                                // // height: el.type === "text" ? 'auto' : el.height,
+                                border: el.type === "text" ? "1px dashed #333" : "none",
+                                // backgroundColor: el.backgroundColor,
+                                // cursor: "move",
                             }}
                             draggable
                             onDragStart={(e) => handleDragStart(e, el.id)}
@@ -425,6 +464,8 @@ const CanvasDesigner = () => {
                             {el.type === "text" ? (
                                 <div
                                     style={{
+                                        margin: `${el?.margin ?? 0}px`,
+                                        padding: `${el?.padding ?? 0}px`,
                                         outline: "none",
                                         wordBreak: "break-word",
                                         width: "100%",
@@ -435,7 +476,9 @@ const CanvasDesigner = () => {
                                     contentEditable
                                     suppressContentEditableWarning
                                     onMouseUp={saveCursorPosition}
-                                    onKeyUp={saveCursorPosition}
+                                    onKeyUp={() => {
+                                        saveCursorPosition();
+                                    }}
                                     onClick={handleDropdownSelection} // Track dropdown selection
                                     onInput={handleInput}
                                     onBlur={handleBlur} // Sync on blur
@@ -494,12 +537,13 @@ const CanvasDesigner = () => {
                                         </tr>
                                     ))}
                                 </table>
-                            ): el.type === "checkbox" ? (
+                            ) : el.type === "checkbox" ? (
                                 <input type="checkbox" checked={el.checked} readOnly />
                             ) : null}
                         </div>
                     ))}
                 </div>
+                {/* ShowToolbar here */}
 
                 {showToolbar && (
                     <div
