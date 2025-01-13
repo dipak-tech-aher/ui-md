@@ -1,0 +1,433 @@
+import React, { useState, useRef } from "react";
+
+const CanvasDesigner = () => {
+    const [elements, setElements] = useState([]);
+    const [draggingId, setDraggingId] = useState(null);
+    const [dragOffset, setDragOffset] = useState({ x: 0, y: 0 });
+    const [selectedElementId, setSelectedElementId] = useState(null);
+    const [showToolbar, setShowToolbar] = useState(false);
+    const [toolbarPosition, setToolbarPosition] = useState({ x: 0, y: 0 });
+    const [selectedCell, setSelectedCell] = useState(null);
+
+    const [cursorRange, setCursorRange] = useState(null); // To save the cursor range
+    const [dropdownOptionsInput, setDropdownOptionsInput] = useState(""); // For options input
+    const contentEditableRef = useRef(null);
+    const selectedDropdownRef = useRef(null); // To track the selected dropdown
+
+    const options = ["Option 1", "Option 2", "Option 3"];
+
+
+    const handleDrop = (e) => {
+        e.preventDefault();
+        const type = e.dataTransfer.getData("type");
+        const canvasRect = e.currentTarget.getBoundingClientRect();
+        let x = e.clientX - canvasRect.left - dragOffset.x;
+        let y = e.clientY - canvasRect.top - dragOffset.y;
+
+        // Constrain position to canvas bounds
+        x = Math.max(0, Math.min(x, canvasRect.width - 100)); // Assuming 100px as the default width
+        y = Math.max(0, Math.min(y, canvasRect.height - 50)); // Assuming 50px as the default height
+
+        if (type) {
+            const newElement = {
+                id: Date.now(),
+                type,
+                x,
+                y,
+                width: type === "table" ? 200 : type === "checkbox" ? 20 : 100,
+                height: type === "table" ? 100 : type === "checkbox" ? 20 : 50,
+                content: type === "text" ? "Edit me" : "",
+                rows: 2,
+                cols: 2,
+                tableData: Array(2)
+                    .fill(null)
+                    .map(() => Array(2).fill("Cell")),
+                label: "Label",
+            };
+            setElements([...elements, newElement]);
+        } else if (draggingId) {
+            setElements((prev) =>
+                prev.map((el) =>
+                    el.id === draggingId
+                        ? {
+                            ...el,
+                            x: Math.max(0, Math.min(x, canvasRect.width - el.width)),
+                            y: Math.max(0, Math.min(y, canvasRect.height - el.height)),
+                        }
+                        : el
+                )
+            );
+            setDraggingId(null);
+        }
+    };
+
+    const handleDragStart = (e, id) => {
+        const element = elements.find((el) => el.id === id);
+        const canvasRect = e.currentTarget.parentNode.getBoundingClientRect();
+        const offsetX = e.clientX - canvasRect.left - element.x;
+        const offsetY = e.clientY - canvasRect.top - element.y;
+        setDraggingId(id);
+        setDragOffset({ x: offsetX, y: offsetY });
+    };
+
+    const handleDragOver = (e) => e.preventDefault();
+
+    const handleSelectElement = (e, id) => {
+        const canvasRect = e.currentTarget.getBoundingClientRect();
+        setSelectedElementId(id);
+        setSelectedCell(null);
+        setShowToolbar(true);
+        setToolbarPosition({ x: e.clientX - canvasRect.left, y: e.clientY - canvasRect.top });
+    };
+
+    const handleUpdateConfig = (field, value) => {
+        setElements((prev) =>
+            prev.map((el) =>
+                el.id === selectedElementId ? { ...el, [field]: value } : el
+            )
+        );
+    };
+
+    const generateHTML = () => {
+
+        const html = elements
+            .map((el) => {
+                if (el.type === "text") {
+                    return `<div style="position: absolute; left: ${el.x}px; top: ${el.y}px; width: ${el.width}px; height: ${el.height}px; background-color: ${el.backgroundColor};">${contentEditableRef.current.innerHTML}</div>`;
+                } else if (el.type === "table") {
+                    const rows = el.tableData
+                        .map(
+                            (row) =>
+                                `<tr>${row
+                                    .map(
+                                        (cell) =>
+                                            `<td style="border: 1px solid #333; padding: 5px;">${cell}</td>`
+                                    )
+                                    .join("")}</tr>`
+                        )
+                        .join("");
+                    return `<div style="position: absolute; left: ${el.x}px; top: ${el.y}px; width: ${el.width}px; height: ${el.height}px;">
+                                <table style="width: 100%; height: 100%; border-collapse: collapse;">
+                                    ${rows}
+                                </table>
+                            </div>`;
+                } else if (el.type === "checkbox") {
+                    return `<div style="position: absolute; left: ${el.x}px; top: ${el.y}px; width: ${el.width}px; height: ${el.height}px;">
+                                <input type="checkbox" ${el.checked ? "checked" : ""} />
+                            </div>`;
+                }
+                return "";
+            })
+            .join("");
+        console.log(html);
+        return html;
+    };
+
+    const selectedElement = elements.find((el) => el.id === selectedElementId);
+
+    // Toolbar code
+
+    const handleRemoveElement = () => {
+        if (selectedElementId) {
+            setElements((prev) => prev.filter((el) => el.id !== selectedElementId));
+            setShowToolbar(false);
+            setSelectedElementId(null);
+        }
+    };
+
+
+
+    const handleDropdownSelection = (e) => {
+        if (e.target.tagName === "SELECT") {
+            selectedDropdownRef.current = e.target; // Track the selected dropdown
+        } else {
+            selectedDropdownRef.current = null; // Clear selection if not a dropdown
+        }
+    };
+
+    const saveCursorPosition = () => {
+        const selection = window.getSelection();
+        if (selection.rangeCount > 0) {
+            const range = selection.getRangeAt(0);
+            setCursorRange(range);
+        }
+    };
+
+    const handleInsertDropdown = () => {
+        if (cursorRange && contentEditableRef.current) {
+            const optionsArray = dropdownOptionsInput
+                .split(",")
+                .map((opt) => opt.trim())
+                .filter((opt) => opt); // Parse options from input
+
+            const selectElement = document.createElement("select");
+            selectElement.contentEditable = "false"; // Prevent editing the dropdown itself
+            selectElement.style.margin = "0 5px";
+            selectElement.style.display = "inline-block";
+            selectElement.style.verticalAlign = "middle";
+
+            // Add options to the dropdown
+            optionsArray.forEach((option) => {
+                const optionElement = document.createElement("option");
+                optionElement.value = option;
+                optionElement.textContent = option;
+                selectElement.appendChild(optionElement);
+            });
+
+            cursorRange.insertNode(selectElement);
+            console.log('selectElement---->', selectElement)
+            // Move the cursor to the end of the inserted dropdown
+            const newRange = document.createRange();
+            newRange.setStartAfter(selectElement);
+            newRange.setEndAfter(selectElement);
+            const selection = window.getSelection();
+            selection.removeAllRanges();
+            selection.addRange(newRange);
+
+            // Reset input
+            setDropdownOptionsInput("");
+        }
+    };
+
+    const handleUpdateDropdown = () => {
+        const selectedDropdown = selectedDropdownRef.current;
+
+        if (selectedDropdown && selectedDropdown.tagName === "SELECT") {
+            const optionsArray = dropdownOptionsInput
+                .split(",")
+                .map((opt) => opt.trim())
+                .filter((opt) => opt);
+
+            // Clear existing options
+            selectedDropdown.innerHTML = "";
+
+            // Add new options
+            optionsArray.forEach((option) => {
+                const optionElement = document.createElement("option");
+                optionElement.value = option;
+                optionElement.textContent = option;
+                selectedDropdown.appendChild(optionElement);
+            });
+
+            // Reset input
+            setDropdownOptionsInput("");
+        } else {
+            alert("Please select a dropdown to update.");
+        }
+    };
+
+    const handleTextFormat = (command) => {
+        document.execCommand(command, false, null);
+    };
+
+
+    const [isEditing, setIsEditing] = useState(false);
+
+    // Function to update the state and sync content
+    const syncContentToState = () => {
+        const content = contentEditableRef.current?.textContent || "";
+        console.log('content---->', content)
+        // setElements((prev) =>
+        //     prev.map((item) =>
+        //         item.id === selectedElementId
+        //             ? { ...item, content }
+        //             : item
+        //     )
+        // );
+    };
+
+    // Preserve cursor position during updates
+    const handleInput = (e) => {
+        const selection = window.getSelection();
+        const range = selection.getRangeAt(0); // Save cursor position
+
+        setIsEditing(true); // Indicate editing is in progress
+
+        // Restore cursor position
+        setTimeout(() => {
+            selection.removeAllRanges();
+            selection.addRange(range);
+        }, 0);
+    };
+
+    // Handle when the user finishes editing
+    const handleBlur = () => {
+        setIsEditing(false);
+        syncContentToState(); // Sync content with state on blur
+    };
+
+    return (
+        <div style={{ display: "flex", gap: "20px" }}>
+            <div style={{ width: "200px", border: "1px solid #ccc", padding: "10px" }}>
+                <h4>Configuration</h4>
+                {selectedElement ? (
+                    <>
+                        <label>
+                            Width (px):
+                            <input
+                                type="number"
+                                value={selectedElement.width}
+                                onChange={(e) => handleUpdateConfig("width", parseInt(e.target.value) || 0)}
+                            />
+                        </label>
+
+                        <label>
+                            Height (px):
+                            <input
+                                type="number"
+                                value={selectedElement.height}
+                                onChange={(e) => handleUpdateConfig("height", parseInt(e.target.value) || 0)}
+                            />
+                        </label>
+                        <label>
+                            Background color:
+                            <input
+                                type="color"
+                                value={selectedElement?.backgroundColor || "#ffffff"}
+                                onChange={(e) => {
+                                    const newColor = e.target.value;
+                                    setElements((prev) =>
+                                        prev.map((el) =>
+                                            el.id === selectedElement.id
+                                                ? { ...el, backgroundColor: newColor }
+                                                : el
+                                        )
+                                    );
+                                }}
+                            />
+                        </label>
+                    </>
+                ) : (
+                    <p>Select an item to configure</p>
+                )}
+                <button onClick={generateHTML}>Generate HTML</button>
+            </div>
+
+            <div>
+                <div
+                    style={{
+                        display: "flex",
+                        gap: "10px",
+                        marginBottom: "10px",
+                        border: "1px solid #ccc",
+                        padding: "10px",
+                        backgroundColor: "#f1f1f1",
+                    }}
+                >
+                    <button draggable onDragStart={(e) => e.dataTransfer.setData("type", "text")}>
+                        Add Text
+                    </button>
+                    <button draggable onDragStart={(e) => e.dataTransfer.setData("type", "checkbox")}>
+                        Add Checkbox
+                    </button>
+                    <button draggable onDragStart={(e) => e.dataTransfer.setData("type", "table")}>
+                        Add Table
+                    </button>
+                </div>
+
+                <div
+                    style={{
+                        position: "relative",
+                        width: "800px",
+                        height: "500px",
+                        border: "1px solid #ccc",
+                        backgroundColor: "#f9f9f9",
+                        overflow: "auto", // Enable scrolling when content exceeds canvas height
+                    }}
+                    onDrop={handleDrop}
+                    onDragOver={handleDragOver}
+                >
+                    {elements.map((el) => (
+                        <div
+                            key={el.id}
+                            style={{
+                                position: "absolute",
+                                left: el.x,
+                                top: el.y,
+                                width: el.width,
+                                height: el.type === "text" ? 'auto' : el.height,
+                                border: el.type === "text" ? "1px dashed #333" : "none",
+                                backgroundColor: el.backgroundColor,
+                                cursor: "move",
+                            }}
+                            draggable
+                            onDragStart={(e) => handleDragStart(e, el.id)}
+                            onClick={(e) => handleSelectElement(e, el.id)}
+                        >
+                            {el.type === "text" ? (
+                                <div
+                                    style={{
+                                        outline: "none",
+                                        wordBreak: "break-word",
+                                        width: "100%",
+                                        height: "100%",
+                                        direction: "ltr",  // Ensure text is typed from left to right
+                                    }}
+                                    ref={contentEditableRef}
+                                    contentEditable
+                                    suppressContentEditableWarning
+                                    onMouseUp={saveCursorPosition}
+                                    onKeyUp={saveCursorPosition}
+                                    onClick={handleDropdownSelection} // Track dropdown selection
+                                    onInput={handleInput}
+                                    onBlur={handleBlur} // Sync on blur
+                                >
+                                    {el.content}
+                                </div>
+
+
+                            ) : el.type === "checkbox" ? (
+                                <input type="checkbox" checked={el.checked} readOnly />
+                            ) : null}
+                        </div>
+                    ))}
+                </div>
+
+                {showToolbar && (
+                    <div
+                        style={{
+                            position: "absolute",
+                            top: toolbarPosition.y,
+                            left: toolbarPosition.x,
+                            padding: "10px",
+                            backgroundColor: "#fff",
+                            border: "1px solid #ccc",
+                            boxShadow: "0 4px 8px rgba(0,0,0,0.1)",
+                            zIndex: 10,
+                        }}
+                    >
+                        <button onClick={() => handleTextFormat("bold")}>B</button>
+                        <button onClick={() => handleTextFormat("italic")}>I</button>
+                        <button onClick={() => handleTextFormat("justifyLeft")}>Left</button>
+                        <button onClick={() => handleTextFormat("justifyCenter")}>Center</button>
+                        <button onClick={() => handleTextFormat("justifyRight")}>Right</button>
+                        <button onClick={() => handleTextFormat("insertUnorderedList")}>•</button>
+                        <div style={{ display: "flex", gap: "20px" }}>
+                            <div style={{ width: "200px", border: "1px solid #ccc", padding: "10px" }}>
+                                <h4>Dropdown Configuration</h4>
+                                <label>
+                                    Options (comma-separated):
+                                    <input
+                                        type="text"
+                                        value={dropdownOptionsInput}
+                                        onChange={(e) => setDropdownOptionsInput(e.target.value)}
+                                        placeholder="e.g., Option 1, Option 2, Option 3"
+                                        style={{ width: "100%", marginBottom: "10px" }}
+                                    />
+                                </label>
+                                <button onClick={handleInsertDropdown}>Insert Dropdown</button>
+                                <button onClick={handleUpdateDropdown} style={{ marginLeft: "10px" }}>
+                                    Update Selected Dropdown
+                                </button>
+                            </div>
+                        </div>
+                        <button onClick={handleRemoveElement}>Remove Element</button>
+                        <button onClick={() => setShowToolbar(false)}>Close</button>
+                    </div>
+                )}
+            </div>
+        </div>
+    );
+};
+
+export default CanvasDesigner;
