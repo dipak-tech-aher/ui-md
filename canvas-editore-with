@@ -8,6 +8,7 @@ const CanvasDesigner = () => {
     const [showToolbar, setShowToolbar] = useState(false);
     const [toolbarPosition, setToolbarPosition] = useState({ x: 0, y: 0 });
     const [selectedCell, setSelectedCell] = useState(null);
+    const [dropdownOptions, setDropdownOptions] = useState("");
 
     const [cursorRange, setCursorRange] = useState(null); // To save the cursor range
     const [dropdownOptionsInput, setDropdownOptionsInput] = useState(""); // For options input
@@ -89,11 +90,10 @@ const CanvasDesigner = () => {
     };
 
     const generateHTML = () => {
-
         const html = elements
             .map((el) => {
                 if (el.type === "text") {
-                    return `<div style="position: absolute; left: ${el.x}px; top: ${el.y}px; width: ${el.width}px; height: ${el.height}px; background-color: ${el.backgroundColor};">${contentEditableRef.current.innerHTML}</div>`;
+                    return `<div style="position: absolute; left: ${el.x}px; top: ${el.y}px; width: ${el.width}px; background-color: ${el.backgroundColor};">${contentEditableRef.current.innerHTML}</div>`;
                 } else if (el.type === "table") {
                     const rows = el.tableData
                         .map(
@@ -106,7 +106,7 @@ const CanvasDesigner = () => {
                                     .join("")}</tr>`
                         )
                         .join("");
-                    return `<div style="position: absolute; left: ${el.x}px; top: ${el.y}px; width: ${el.width}px; height: ${el.height}px;">
+                    return `<div style="position: absolute; left: ${el.x}px; top: ${el.y}px; width: ${el.width}px; height: ${el.height}px;  background-color: ${el.backgroundColor};">
                                 <table style="width: 100%; height: 100%; border-collapse: collapse;">
                                     ${rows}
                                 </table>
@@ -227,13 +227,7 @@ const CanvasDesigner = () => {
     const syncContentToState = () => {
         const content = contentEditableRef.current?.textContent || "";
         console.log('content---->', content)
-        // setElements((prev) =>
-        //     prev.map((item) =>
-        //         item.id === selectedElementId
-        //             ? { ...item, content }
-        //             : item
-        //     )
-        // );
+       
     };
 
     // Preserve cursor position during updates
@@ -254,6 +248,80 @@ const CanvasDesigner = () => {
     const handleBlur = () => {
         setIsEditing(false);
         syncContentToState(); // Sync content with state on blur
+    };
+
+    const insertDropdown = () => {
+        if (!selectedCell || !selectedElementId) {
+            alert("Please select a cell to insert a dropdown.");
+            return;
+        }
+
+        if (!dropdownOptions.trim()) {
+            alert("Please enter options for the dropdown.");
+            return;
+        }
+
+        const optionsArray = dropdownOptions.split(",").map((opt) => opt.trim());
+        const dropdownHTML = `
+            <select>
+                ${optionsArray.map((opt) => `<option value="${opt}">${opt}</option>`).join("")}
+            </select>`;
+        const { rowIdx, colIdx } = selectedCell;
+
+        setElements((prev) =>
+            prev.map((el) => {
+                if (el.id === selectedElementId && el.type === "table") {
+                    const updatedTableData = el.tableData.map((row, rIdx) =>
+                        rIdx === rowIdx
+                            ? row.map((cell, cIdx) => (cIdx === colIdx ? dropdownHTML : cell))
+                            : row
+                    );
+                    return { ...el, tableData: updatedTableData };
+                }
+                return el;
+            })
+        );
+
+        setDropdownOptions(""); // Clear the input field after insertion
+    };
+
+
+    const handleSelectCell = (e, elementId, rowIdx, colIdx) => {
+        e.stopPropagation(); // Prevent canvas click events from resetting selection
+        setSelectedElementId(elementId); // Set the selected element ID
+        setSelectedCell({ rowIdx, colIdx }); // Set the selected cell
+        setShowToolbar(true); // Show the toolbar
+        const canvasRect = e.currentTarget.getBoundingClientRect();
+        setToolbarPosition({
+            x: e.clientX - canvasRect.left,
+            y: e.clientY - canvasRect.top,
+        });
+    };
+
+    const updateCellContent = (elementId, rowIdx, colIdx, content) => {
+        setElements((prev) =>
+            prev.map((el) => {
+                if (el.id === elementId && el.type === "table") {
+                    const updatedTableData = el.tableData.map((row, rIdx) =>
+                        rIdx === rowIdx
+                            ? row.map((cell, cIdx) =>
+                                cIdx === colIdx ? content : cell
+                            )
+                            : row
+                    );
+
+                    // Adjust table height if content expands
+                    const tableHeight =
+                        updatedTableData.length * 30; // Assuming 30px per row
+                    return {
+                        ...el,
+                        tableData: updatedTableData,
+                        height: Math.min(tableHeight, 500), // Restrict to canvas height
+                    };
+                }
+                return el;
+            })
+        );
     };
 
     return (
@@ -374,9 +442,59 @@ const CanvasDesigner = () => {
                                 >
                                     {el.content}
                                 </div>
+                            ) : el.type === "table" ? (
+                                <table
+                                    style={{
+                                        width: "100%",
+                                        height: "100%",
+                                        borderCollapse: "collapse",
+                                    }}
+                                >
+                                    {el.tableData.map((row, rowIdx) => (
+                                        <tr key={rowIdx}>
+                                            {row.map((cell, colIdx) => (
+                                                <td
+                                                    key={colIdx}
+                                                    style={{
+                                                        border: "1px solid #ccc",
+                                                        padding: "5px",
+                                                        position: "relative",
+                                                    }}
+                                                    onClick={(e) => handleSelectCell(e, el.id, rowIdx, colIdx)}
+                                                >
+                                                    {cell.includes("<select") ? (
+                                                        // Render the dropdown using `dangerouslySetInnerHTML`
+                                                        <div contentEditable>
+                                                            <div
 
-
-                            ) : el.type === "checkbox" ? (
+                                                                dangerouslySetInnerHTML={{ __html: cell }}
+                                                                style={{ pointerEvents: "auto" }}
+                                                            />
+                                                        </div>
+                                                    ) : (
+                                                        // Render editable content if it's not a dropdown
+                                                        <div
+                                                            contentEditable
+                                                            suppressContentEditableWarning
+                                                            onBlur={(e) =>
+                                                                updateCellContent(el.id, rowIdx, colIdx, e.target.textContent)
+                                                            }
+                                                            style={{
+                                                                outline: "none",
+                                                                minHeight: "20px",
+                                                                width: "100%",
+                                                                height: "100%",
+                                                            }}
+                                                        >
+                                                            {cell}
+                                                        </div>
+                                                    )}
+                                                </td>
+                                            ))}
+                                        </tr>
+                                    ))}
+                                </table>
+                            ): el.type === "checkbox" ? (
                                 <input type="checkbox" checked={el.checked} readOnly />
                             ) : null}
                         </div>
@@ -421,6 +539,18 @@ const CanvasDesigner = () => {
                                 </button>
                             </div>
                         </div>
+                        {selectedElementId && selectedElement.type === "table" && (
+                            <>
+                                <input
+                                    type="text"
+                                    placeholder="Enter options (comma-separated)"
+                                    value={dropdownOptions}
+                                    onChange={(e) => setDropdownOptions(e.target.value)}
+                                    style={{ margin: "5px", padding: "5px", width: "200px" }}
+                                />
+                                <button onClick={insertDropdown}>Insert Dropdown</button>
+                            </>
+                        )}
                         <button onClick={handleRemoveElement}>Remove Element</button>
                         <button onClick={() => setShowToolbar(false)}>Close</button>
                     </div>
