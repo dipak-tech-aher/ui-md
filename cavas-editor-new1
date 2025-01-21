@@ -1,3 +1,57 @@
+ <div
+              onMouseUp={saveCursorPosition}
+              onKeyUp={() => {
+                saveCursorPosition();
+              }}
+              onBlur={() => handleBlur(el)}
+              contentEditable
+              suppressContentEditableWarning
+              style={{
+                margin: `${el?.margin ?? 0}px`,
+                padding: `${el?.padding ?? 0}px`,
+                outline: 'none',
+                width: '100%',
+                // height: '100%',
+              }}
+              dangerouslySetInnerHTML={{ __html: el.content }} // Use dangerouslySetInnerHTML to render HTML
+            />
+
+  const syncContentToState = (el) => {
+    const element = document.querySelector(`[data-id="${el.id}"]`);
+    const content = element ? element.innerHTML : el.content;
+    const height = element ? element.scrollHeight : el.height; // Get the scrollHeight of the element
+  
+    console.log('content----->', content);
+    console.log('height----->', height);
+    console.log('selectedElementId----->', selectedElementId);
+    console.log('el.id----->', el.id);
+  
+    setElements((prevElements) =>
+      prevElements.map((el) =>
+        el.id === selectedElementId
+          ? {
+              ...el,
+              content,
+              height, // Dynamically update height
+            }
+          : el
+      )
+    );
+  };
+
+
+
+
+
+  const saveCursorPosition = () => {
+    const selection = window.getSelection();
+    if (selection.rangeCount > 0) {
+      const range = selection.getRangeAt(0);
+      setCursorRange(range);
+    }
+  };
+
+
 import React, { useState } from "react";
 
 const CanvasDesigner = () => {
