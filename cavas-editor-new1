@@ -1,4 +1,45 @@
- <div
+ const syncContentToState = (el) => {
+        const element = document.querySelector(`[data-id="${el.id}"]`);
+        const content = element ? element.innerHTML : el.content;
+        const height = element ? element.scrollHeight : el.height; // Get the scrollHeight of the element
+    
+        setElements((prevElements) => {
+            const updatedElements = prevElements.map((item) =>
+                item.id === el.id
+                    ? {
+                          ...item,
+                          content,
+                          height, // Update height based on content
+                      }
+                    : item
+            );
+    
+            // Adjust positions of elements below the updated one
+            const updatedIndex = updatedElements.findIndex((item) => item.id === el.id);
+            let currentY = updatedElements[updatedIndex].y + height + 10; // Add spacing after the updated element
+    
+            for (let i = updatedIndex + 1; i < updatedElements.length; i++) {
+                updatedElements[i] = {
+                    ...updatedElements[i],
+                    y: currentY,
+                };
+                currentY += updatedElements[i].height + 10;
+            }
+    
+            return updatedElements;
+        });
+    };
+
+
+
+
+
+
+
+
+
+
+<div
               onMouseUp={saveCursorPosition}
               onKeyUp={() => {
                 saveCursorPosition();
