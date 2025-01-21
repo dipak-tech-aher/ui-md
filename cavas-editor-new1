@@ -1,99 +1,4 @@
- const syncContentToState = (el) => {
-        const element = document.querySelector(`[data-id="${el.id}"]`);
-        const content = element ? element.innerHTML : el.content;
-        const height = element ? element.scrollHeight : el.height; // Get the scrollHeight of the element
-    
-        setElements((prevElements) => {
-            const updatedElements = prevElements.map((item) =>
-                item.id === el.id
-                    ? {
-                          ...item,
-                          content,
-                          height, // Update height based on content
-                      }
-                    : item
-            );
-    
-            // Adjust positions of elements below the updated one
-            const updatedIndex = updatedElements.findIndex((item) => item.id === el.id);
-            let currentY = updatedElements[updatedIndex].y + height + 10; // Add spacing after the updated element
-    
-            for (let i = updatedIndex + 1; i < updatedElements.length; i++) {
-                updatedElements[i] = {
-                    ...updatedElements[i],
-                    y: currentY,
-                };
-                currentY += updatedElements[i].height + 10;
-            }
-    
-            return updatedElements;
-        });
-    };
-
-
-
-
-
-
-
-
-
-
-<div
-              onMouseUp={saveCursorPosition}
-              onKeyUp={() => {
-                saveCursorPosition();
-              }}
-              onBlur={() => handleBlur(el)}
-              contentEditable
-              suppressContentEditableWarning
-              style={{
-                margin: `${el?.margin ?? 0}px`,
-                padding: `${el?.padding ?? 0}px`,
-                outline: 'none',
-                width: '100%',
-                // height: '100%',
-              }}
-              dangerouslySetInnerHTML={{ __html: el.content }} // Use dangerouslySetInnerHTML to render HTML
-            />
-
-  const syncContentToState = (el) => {
-    const element = document.querySelector(`[data-id="${el.id}"]`);
-    const content = element ? element.innerHTML : el.content;
-    const height = element ? element.scrollHeight : el.height; // Get the scrollHeight of the element
-  
-    console.log('content----->', content);
-    console.log('height----->', height);
-    console.log('selectedElementId----->', selectedElementId);
-    console.log('el.id----->', el.id);
-  
-    setElements((prevElements) =>
-      prevElements.map((el) =>
-        el.id === selectedElementId
-          ? {
-              ...el,
-              content,
-              height, // Dynamically update height
-            }
-          : el
-      )
-    );
-  };
-
-
-
-
-
-  const saveCursorPosition = () => {
-    const selection = window.getSelection();
-    if (selection.rangeCount > 0) {
-      const range = selection.getRangeAt(0);
-      setCursorRange(range);
-    }
-  };
-
-
-import React, { useState } from "react";
+import React, { useState, useRef } from "react";
 
 const CanvasDesigner = () => {
     const [elements, setElements] = useState([]);
@@ -103,16 +8,30 @@ const CanvasDesigner = () => {
     const [showToolbar, setShowToolbar] = useState(false);
     const [toolbarPosition, setToolbarPosition] = useState({ x: 0, y: 0 });
     const [selectedCell, setSelectedCell] = useState(null);
+    const [isEditing, setIsEditing] = useState(false);
+    const [cursorRange, setCursorRange] = useState(null); // To save the cursor range
+    const contentEditableRef = useRef(null);
+    const [canvasHeight, setCanvasHeight] = useState(500); // Initial height of the canvas
 
-    // Existing functions...
+    const updateCanvasHeight = () => {
+        const bufferSpace = 50; // Buffer space to maintain at the bottom
+        const bottomMostElement = elements.reduce((max, el) => {
+            const elBottom = el.y + el.height; // Calculate element's bottom position
+            return elBottom > max ? elBottom : max;
+        }, 0);
 
-    
+        const newHeight = Math.max(bottomMostElement + bufferSpace, 500); // Minimum canvas height is 500
+        setCanvasHeight(newHeight); // Set the canvas height
+    };
+
+
+
     const handleDrop = (e) => {
         e.preventDefault();
         const type = e.dataTransfer.getData("type");
         const canvasRect = e.currentTarget.getBoundingClientRect();
-        const x = e.clientX - canvasRect.left - dragOffset.x;
-        const y = e.clientY - canvasRect.top - dragOffset.y;
+        let x = e.clientX - canvasRect.left - dragOffset.x;
+        let y = e.clientY - canvasRect.top - dragOffset.y;
 
         if (type) {
             const newElement = {
@@ -121,7 +40,7 @@ const CanvasDesigner = () => {
                 x,
                 y,
                 width: type === "table" ? 200 : type === "checkbox" ? 20 : 100,
-                height: type === "table" ? 100 : type === "checkbox" ? 20 : 50,
+                height: type === "table" ? 71 : type === "checkbox" ? 20 : 50,
                 content: type === "text" ? "Edit me" : "",
                 rows: 2,
                 cols: 2,
@@ -130,18 +49,29 @@ const CanvasDesigner = () => {
                     .map(() => Array(2).fill("Cell")),
                 label: "Label",
             };
-            setElements([...elements, newElement]);
-        } else if (draggingId) {
+            setElements((prev) => {
+                const newElements = [...prev, newElement];
+                setTimeout(() => updateCanvasHeight(), 0); // Recalculate canvas height after state update
+                return newElements;
+            });
+        }
+        else if (draggingId) {
             setElements((prev) =>
                 prev.map((el) =>
-                    el.id === draggingId ? { ...el, x, y } : el
+                    el.id === draggingId
+                        ? {
+                            ...el,
+                            x: Math.max(0, Math.min(x, canvasRect.width - el.width)),
+                            y: Math.max(0, Math.min(y, canvasRect.height - el.height)),
+                        }
+                        : el
                 )
             );
             setDraggingId(null);
+            setTimeout(updateCanvasHeight, 0); // Update canvas height
         }
-    };
 
-    const handleDragOver = (e) => e.preventDefault();
+    };
 
     const handleDragStart = (e, id) => {
         const element = elements.find((el) => el.id === id);
@@ -152,6 +82,8 @@ const CanvasDesigner = () => {
         setDragOffset({ x: offsetX, y: offsetY });
     };
 
+    const handleDragOver = (e) => e.preventDefault();
+
     const handleSelectElement = (e, id) => {
         const canvasRect = e.currentTarget.getBoundingClientRect();
         setSelectedElementId(id);
@@ -159,19 +91,6 @@ const CanvasDesigner = () => {
         setShowToolbar(true);
         setToolbarPosition({ x: e.clientX - canvasRect.left, y: e.clientY - canvasRect.top });
     };
-
-    const handleSelectCell = (e, elementId, rowIdx, colIdx) => {
-        e.stopPropagation(); // Prevent canvas click events from resetting selection
-        setSelectedElementId(elementId); // Set the selected element ID
-        setSelectedCell({ rowIdx, colIdx }); // Set the selected cell
-        setShowToolbar(true); // Show the toolbar
-        const canvasRect = e.currentTarget.getBoundingClientRect();
-        setToolbarPosition({
-            x: e.clientX - canvasRect.left,
-            y: e.clientY - canvasRect.top,
-        });
-    };
-
 
     const handleUpdateConfig = (field, value) => {
         setElements((prev) =>
@@ -181,127 +100,11 @@ const CanvasDesigner = () => {
         );
     };
 
-    const handleTextFormat = (command) => {
-        document.execCommand(command, false, null);
-    };
-
-    const insertDropdown = () => {
-        if (!selectedCell || !selectedElementId) {
-            alert("Please select a cell to insert a dropdown.");
-            return;
-        }
-
-        const dropdownHTML = `
-            <select>
-                <option value="Option 1">Option 1</option>
-                <option value="Option 2">Option 2</option>
-            </select>`;
-        const { rowIdx, colIdx } = selectedCell;
-
-        setElements((prev) =>
-            prev.map((el) => {
-                if (el.id === selectedElementId && el.type === "table") {
-                    const updatedTableData = el.tableData.map((row, rIdx) =>
-                        rIdx === rowIdx
-                            ? row.map((cell, cIdx) => (cIdx === colIdx ? dropdownHTML : cell))
-                            : row
-                    );
-                    return { ...el, tableData: updatedTableData };
-                }
-                return el;
-            })
-        );
-    };
-
-    const updateCellContent = (elementId, rowIdx, colIdx, content) => {
-        setElements((prev) =>
-            prev.map((el) => {
-                if (el.id === elementId && el.type === "table") {
-                    const updatedTableData = el.tableData.map((row, rIdx) =>
-                        rIdx === rowIdx
-                            ? row.map((cell, cIdx) =>
-                                cIdx === colIdx ? content : cell
-                            )
-                            : row
-                    );
-                    return { ...el, tableData: updatedTableData };
-                }
-                return el;
-            })
-        );
-    };
-
-    const handleAddRow = () => {
-        if (selectedElementId) {
-            setElements((prev) =>
-                prev.map((el) => {
-                    if (el.id === selectedElementId && el.type === "table") {
-                        const newTableData = [...el.tableData, Array(el.cols).fill("Cell")];
-                        return { ...el, tableData: newTableData, rows: el.rows + 1 };
-                    }
-                    return el;
-                })
-            );
-        }
-    };
-
-    const handleRemoveRow = () => {
-        if (selectedElementId) {
-            setElements((prev) =>
-                prev.map((el) => {
-                    if (el.id === selectedElementId && el.type === "table" && el.rows > 1) {
-                        const newTableData = el.tableData.slice(0, -1);
-                        return { ...el, tableData: newTableData, rows: el.rows - 1 };
-                    }
-                    return el;
-                })
-            );
-        }
-    };
-
-    const handleAddColumn = () => {
-        if (selectedElementId) {
-            setElements((prev) =>
-                prev.map((el) => {
-                    if (el.id === selectedElementId && el.type === "table") {
-                        const newTableData = el.tableData.map((row) => [...row, "Cell"]);
-                        return { ...el, tableData: newTableData, cols: el.cols + 1 };
-                    }
-                    return el;
-                })
-            );
-        }
-    };
-
-    const handleRemoveColumn = () => {
-        if (selectedElementId) {
-            setElements((prev) =>
-                prev.map((el) => {
-                    if (el.id === selectedElementId && el.type === "table" && el.cols > 1) {
-                        const newTableData = el.tableData.map((row) => row.slice(0, -1));
-                        return { ...el, tableData: newTableData, cols: el.cols - 1 };
-                    }
-                    return el;
-                })
-            );
-        }
-    };
-
-    const handleRemoveElement = () => {
-        if (selectedElementId) {
-            setElements((prev) => prev.filter((el) => el.id !== selectedElementId));
-            setShowToolbar(false);
-            setSelectedElementId(null);
-        }
-    };
-
-
     const generateHTML = () => {
         const html = elements
             .map((el) => {
-
                 if (el.type === "text") {
-                    return `<div style="position: absolute; left: ${el.x}px; top: ${el.y}px; width: ${el.width}px; height: ${el.height}px; background-color: ${el.backgroundColor};">${el.content}</div>`;
+                    return `<div style="position: absolute; left: ${el.x}px; top: ${el.y}px; width: ${el.width}px; background-color: ${el.backgroundColor};">${contentEditableRef.current.innerHTML}</div>`;
                 } else if (el.type === "table") {
                     const rows = el.tableData
                         .map(
@@ -314,7 +117,7 @@ const CanvasDesigner = () => {
                                     .join("")}</tr>`
                         )
                         .join("");
-                    return `<div style="position: absolute; left: ${el.x}px; top: ${el.y}px; width: ${el.width}px; height: ${el.height}px;">
+                    return `<div style="position: absolute; left: ${el.x}px; top: ${el.y}px; width: ${el.width}px; height: ${el.height}px;  background-color: ${el.backgroundColor};">
                                 <table style="width: 100%; height: 100%; border-collapse: collapse;">
                                     ${rows}
                                 </table>
@@ -333,95 +136,94 @@ const CanvasDesigner = () => {
 
     const selectedElement = elements.find((el) => el.id === selectedElementId);
 
-
-    const parseHTML = (html) => {
-        const parser = new DOMParser();
-        const doc = parser.parseFromString(html, "text/html");
-        const parsedElements = [];
-
-        doc.body.childNodes.forEach((node) => {
-            if (node.nodeType === Node.ELEMENT_NODE) {
-                const style = node.style;
-                const x = parseInt(style.left, 10) || 0;
-                const y = parseInt(style.top, 10) || 0;
-                const width = parseInt(style.width, 10) || 100;
-                const height = parseInt(style.height, 10) || 50;
-                const backgroundColor = style.backgroundColor || "#fff";
-
-                if (node.tagName === "DIV" && node.innerHTML.includes("input")) {
-                    parsedElements.push({
-                        id: Date.now() + Math.random(),
-                        type: "checkbox",
-                        x,
-                        y,
-                        width,
-                        height,
-                        backgroundColor,
-                        checked: node.querySelector("input").checked,
-                    });
-                } else if (node.tagName === "DIV" && node.innerHTML.includes("table")) {
-                    const table = node.querySelector("table");
-                    const tableData = Array.from(table.rows).map((row) =>
-                        Array.from(row.cells).map((cell) => cell.innerHTML)
-                    );
-                    parsedElements.push({
-                        id: Date.now() + Math.random(),
-                        type: "table",
-                        x,
-                        y,
-                        width,
-                        height,
-                        backgroundColor,
-                        rows: tableData.length,
-                        cols: tableData[0]?.length || 0,
-                        tableData,
-                    });
-                } else {
-                    parsedElements.push({
-                        id: Date.now() + Math.random(),
-                        type: "text",
-                        x,
-                        y,
-                        width,
-                        height,
-                        backgroundColor,
-                        content: node.innerText,
-                    });
-                }
-            }
-        });
-
-        setElements(parsedElements);
+    const saveCursorPosition = () => {
+        const selection = window.getSelection();
+        if (selection.rangeCount > 0) {
+            const range = selection.getRangeAt(0);
+            setCursorRange(range);
+        }
     };
 
-    const handleFileUpload = (e) => {
-        const file = e.target.files[0];
-        const reader = new FileReader();
+    const syncContentToState = (el) => {
+        const element = document.querySelector(`[data-id="${el.id}"]`);
+        const content = element ? element.innerHTML : el.content;
+        const height = element ? element.scrollHeight : el.height; // Get the scrollHeight of the element
 
-        reader.onload = (event) => {
-            const htmlContent = event.target.result;
-            parseHTML(htmlContent);
-        };
+        setElements((prevElements) => {
+            const updatedElements = prevElements.map((item) =>
+                item.id === el.id
+                    ? {
+                        ...item,
+                        content,
+                        height, // Update height based on content
+                    }
+                    : item
+            );
 
-        if (file) {
-            reader.readAsText(file);
-        }
+            // Adjust positions of elements below the updated one
+            const updatedIndex = updatedElements.findIndex((item) => item.id === el.id);
+            let currentY = updatedElements[updatedIndex].y + height + 10; // Add spacing after the updated element
+
+            for (let i = updatedIndex + 1; i < updatedElements.length; i++) {
+                updatedElements[i] = {
+                    ...updatedElements[i],
+                    y: currentY,
+                };
+                currentY += updatedElements[i].height + 10;
+            }
+
+            return updatedElements;
+        });
+    };
+
+    // Handle when the user finishes editing
+    const handleBlur = (el) => {
+        setIsEditing(false);
+        syncContentToState(el); // Sync content with state on blur
+    };
+
+    const handleSelectCell = (e, elementId, rowIdx, colIdx) => {
+        e.stopPropagation(); // Prevent canvas click events from resetting selection
+        setSelectedElementId(elementId); // Set the selected element ID
+        setSelectedCell({ rowIdx, colIdx }); // Set the selected cell
+        setShowToolbar(true); // Show the toolbar
+        const canvasRect = e.currentTarget.getBoundingClientRect();
+        setToolbarPosition({
+            x: e.clientX - canvasRect.left,
+            y: e.clientY - canvasRect.top,
+        });
+    };
+
+    const updateCellContent = (elementId, rowIdx, colIdx, content) => {
+        setElements((prev) =>
+            prev.map((el) => {
+                if (el.id === elementId && el.type === "table") {
+                    const updatedTableData = el.tableData.map((row, rIdx) =>
+                        rIdx === rowIdx
+                            ? row.map((cell, cIdx) =>
+                                cIdx === colIdx ? content : cell
+                            )
+                            : row
+                    );
+
+                    // Adjust table height if content expands
+                    const tableHeight =
+                        updatedTableData.length * 30; // Assuming 30px per row
+                    return {
+                        ...el,
+                        tableData: updatedTableData,
+                        height: Math.min(tableHeight, 500), // Restrict to canvas height
+                    };
+                }
+                return el;
+            })
+        );
     };
 
     return (
         <div style={{ display: "flex", gap: "20px" }}>
-            {/* Configuration Panel */}
-            
             <div style={{ width: "200px", border: "1px solid #ccc", padding: "10px" }}>
                 <h4>Configuration</h4>
-                <input type="file" accept=".html" onChange={handleFileUpload} />
-                <textarea
-                    placeholder="Paste your HTML here"
-                    rows={5}
-                    style={{ width: "100%" }}
-                    onBlur={(e) => parseHTML(e.target.value)}
-                ></textarea>
-                <button onClick={() => setElements([])}>Clear Canvas</button>
                 {selectedElement ? (
                     <>
                         <label>
@@ -441,23 +243,7 @@ const CanvasDesigner = () => {
                                 onChange={(e) => handleUpdateConfig("height", parseInt(e.target.value) || 0)}
                             />
                         </label>
-                        <label>
-                            Background color:
-                            <input
-                                type="color"
-                                value={selectedElement?.backgroundColor || "#ffffff"}
-                                onChange={(e) => {
-                                    const newColor = e.target.value;
-                                    setElements((prev) =>
-                                        prev.map((el) =>
-                                            el.id === selectedElement.id
-                                                ? { ...el, backgroundColor: newColor }
-                                                : el
-                                        )
-                                    );
-                                }}
-                            />
-                        </label>
+
                     </>
                 ) : (
                     <p>Select an item to configure</p>
@@ -491,9 +277,10 @@ const CanvasDesigner = () => {
                     style={{
                         position: "relative",
                         width: "800px",
-                        height: "600px",
+                        height: `${canvasHeight}px`, // Use dynamic height
                         border: "1px solid #ccc",
                         backgroundColor: "#f9f9f9",
+                        overflow: "auto", // Enable scrolling if necessary
                     }}
                     onDrop={handleDrop}
                     onDragOver={handleDragOver}
@@ -501,12 +288,13 @@ const CanvasDesigner = () => {
                     {elements.map((el) => (
                         <div
                             key={el.id}
+                            data-id={el?.id}
                             style={{
                                 position: "absolute",
                                 left: el.x,
                                 top: el.y,
                                 width: el.width,
-                                height: el.height,
+                                // height: el.type === "text" ? 'auto' : el.height,
                                 border: el.type === "text" ? "1px dashed #333" : "none",
                                 backgroundColor: el.backgroundColor,
                                 cursor: "move",
@@ -517,17 +305,21 @@ const CanvasDesigner = () => {
                         >
                             {el.type === "text" ? (
                                 <div
+                                    onMouseUp={saveCursorPosition}
+                                    onKeyUp={() => {
+                                        saveCursorPosition();
+                                    }}
+                                    onBlur={() => handleBlur(el)}
                                     contentEditable
                                     suppressContentEditableWarning
                                     style={{
-                                        width: "100%",
-                                        height: "100%",
-                                        border: "none",
-                                        outline: "none",
+                                        margin: `${el?.margin ?? 0}px`,
+                                        padding: `${el?.padding ?? 0}px`,
+                                        outline: 'none',
+                                        width: '100%',
                                     }}
-                                >
-                                    {el.content}
-                                </div>
+                                    dangerouslySetInnerHTML={{ __html: el.content }} // Use dangerouslySetInnerHTML to render HTML
+                                />
                             ) : el.type === "table" ? (
                                 <table
                                     style={{
@@ -579,73 +371,12 @@ const CanvasDesigner = () => {
                                             ))}
                                         </tr>
                                     ))}
-
-
                                 </table>
                             ) : el.type === "checkbox" ? (
                                 <input type="checkbox" checked={el.checked} readOnly />
                             ) : null}
                         </div>
                     ))}
-
-                    {/* Toolbar */}
-                    {/* {showToolbar && (
-                        <div
-                            style={{
-                                position: "absolute",
-                                left: toolbarPosition.x,
-                                top: toolbarPosition.y,
-                                backgroundColor: "#fff",
-                                border: "1px solid #ccc",
-                                padding: "5px",
-                                display: "flex",
-                                gap: "5px",
-                                zIndex: 1000,
-                            }}
-                        >
-                            <button onClick={() => handleTextFormat("bold")}>B</button>
-                            <button onClick={() => handleTextFormat("italic")}>I</button>
-                            <button onClick={() => handleTextFormat("justifyLeft")}>Left</button>
-                            <button onClick={() => handleTextFormat("justifyCenter")}>Center</button>
-                            <button onClick={() => handleTextFormat("justifyRight")}>Right</button>
-                            <button onClick={() => handleTextFormat("insertUnorderedList")}>•</button>
-                            <button onClick={insertDropdown}>Dropdown</button>
-                            <button onClick={() => setShowToolbar(false)}>Close</button>
-                        </div>
-                    )} */}
-
-                    {showToolbar && (
-                        <div
-                            style={{
-                                position: "absolute",
-                                top: toolbarPosition.y,
-                                left: toolbarPosition.x,
-                                padding: "10px",
-                                backgroundColor: "#fff",
-                                border: "1px solid #ccc",
-                                boxShadow: "0 4px 8px rgba(0,0,0,0.1)",
-                                zIndex: 10,
-                            }}
-                        >
-                            <button onClick={() => handleTextFormat("bold")}>B</button>
-                            <button onClick={() => handleTextFormat("italic")}>I</button>
-                            <button onClick={() => handleTextFormat("justifyLeft")}>Left</button>
-                            <button onClick={() => handleTextFormat("justifyCenter")}>Center</button>
-                            <button onClick={() => handleTextFormat("justifyRight")}>Right</button>
-                            <button onClick={() => handleTextFormat("insertUnorderedList")}>•</button>
-                            {selectedElementId && selectedElement.type === "table" && (
-                                <>
-                                    <button onClick={handleAddRow}>Add Row</button>
-                                    <button onClick={handleRemoveRow}>Remove Row</button>
-                                    <button onClick={handleAddColumn}>Add Column</button>
-                                    <button onClick={handleRemoveColumn}>Remove Column</button>
-                                    <button onClick={insertDropdown}>Insert Dropdown</button>
-                                </>
-                            )}
-                            <button onClick={handleRemoveElement}>Remove Element</button>
-                            <button onClick={() => setShowToolbar(false)}>Close</button>
-                        </div>
-                    )}
                 </div>
             </div>
         </div>
