@@ -1,4 +1,28 @@
-  const syncContentToState = (el) => {
+   const deleteSelectedElement = () => {
+        if (selectedElementId) {
+            // Remove the selected element
+            setElements((prev) => prev.filter((el) => el.id !== selectedElementId));
+            setSelectedElementId(null); // Reset selection
+            setShowToolbar(false); // Hide the toolbar
+    
+            // Update canvas height after deletion
+            setTimeout(() => {
+                const bufferSpace = 50; // Buffer space at the bottom
+                const remainingElements = elements.filter((el) => el.id !== selectedElementId);
+                const bottomMostElement = remainingElements.reduce((max, el) => {
+                    const elBottom = el.y + el.height; // Calculate bottom position of each element
+                    return elBottom > max ? elBottom : max;
+                }, 0);
+    
+                const newHeight = Math.max(bottomMostElement + bufferSpace, 500); // Minimum height is 500
+                setCanvasHeight(newHeight);
+            }, 0);
+        }
+    };
+    
+
+
+const syncContentToState = (el) => {
         const element = document.querySelector(`[data-id="${el.id}"]`);
         const content = element ? element.innerHTML : el.content;
         const newHeight = element ? element.scrollHeight : el.height;
