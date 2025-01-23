@@ -1,10 +1,78 @@
-   const deleteSelectedElement = () => {
+  const handleDrop = (e) => {
+        e.preventDefault();
+        const type = e.dataTransfer.getData("type");
+        const canvasRect = e.currentTarget.getBoundingClientRect();
+        let x = e.clientX - canvasRect.left - dragOffset.x;
+        let y = e.clientY - canvasRect.top - dragOffset.y;
+
+        if (type) {
+            const newElement = {
+                id: Date.now(),
+                type,
+                x,
+                y,
+                width: type === "table" ? 200 : type === "checkbox" ? 20 : 100,
+                height: type === "table" ? 71 : type === "checkbox" ? 20 : 50,
+                content: type === "text" ? "Edit me" : "",
+                rows: 2,
+                cols: 2,
+                tableData: Array(2)
+                    .fill(null)
+                    .map(() => Array(2).fill("Cell")),
+                label: "Label",
+            };
+
+            setElements((prev) => {
+                if (y < 50) {
+                    // If the element is added at the top, shift others down
+                    const shiftAmount = newElement.height + 10; // Spacing of 10px
+                    const updatedElements = prev.map((el) => {
+                        if (el.y >= newElement.y) {
+                            return { ...el, y: el.y + shiftAmount };
+                        }
+                        return el;
+                    });
+
+                    newElement.y = 10; // Place the new element at the top
+                    return [newElement, ...updatedElements];
+                }
+
+                // Add the element at its dropped position
+                return [...prev, newElement];
+            });
+
+            setTimeout(updateCanvasHeight, 0); // Update canvas height
+        } else if (draggingId) {
+            setElements((prev) => {
+                // Update position of the dragged element
+                const updatedElements = prev.map((el) =>
+                    el.id === draggingId
+                        ? {
+                            ...el,
+                            x: Math.max(0, Math.min(x, canvasRect.width - el.width)),
+                            y: Math.max(0, Math.min(y, canvasRect.height - el.height)),
+                        }
+                        : el
+                );
+
+                // Ensure elements are sorted top to bottom by `y` after repositioning
+                updatedElements.sort((a, b) => a.y - b.y);
+
+                return updatedElements;
+            });
+
+            setDraggingId(null);
+            setTimeout(updateCanvasHeight, 0); // Update canvas height
+        }
+    };
+
+  const deleteSelectedElement = () => {
         if (selectedElementId) {
             // Remove the selected element
             setElements((prev) => prev.filter((el) => el.id !== selectedElementId));
             setSelectedElementId(null); // Reset selection
             setShowToolbar(false); // Hide the toolbar
-    
+
             // Update canvas height after deletion
             setTimeout(() => {
                 const bufferSpace = 50; // Buffer space at the bottom
@@ -13,14 +81,12 @@
                     const elBottom = el.y + el.height; // Calculate bottom position of each element
                     return elBottom > max ? elBottom : max;
                 }, 0);
-    
+
                 const newHeight = Math.max(bottomMostElement + bufferSpace, 500); // Minimum height is 500
                 setCanvasHeight(newHeight);
             }, 0);
         }
     };
-    
-
 
 const syncContentToState = (el) => {
         const element = document.querySelector(`[data-id="${el.id}"]`);
