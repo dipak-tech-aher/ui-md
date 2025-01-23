@@ -179,6 +179,71 @@ const CanvasDesigner = () => {
     }
   };
 
+  const parseHTML = (html) => {
+    const parser = new DOMParser();
+    const doc = parser.parseFromString(html, 'text/html');
+    const parsedElements = [];
+
+    doc.body.childNodes.forEach((node) => {
+      if (node.nodeType === Node.ELEMENT_NODE) {
+        const style = node.style;
+        const x = parseInt(style.left, 10) || 0;
+        const y = parseInt(style.top, 10) || 0;
+        const width = parseInt(style.width, 10) || 100;
+        const height = parseInt(style.height, 10) || 50;
+        const backgroundColor = style.backgroundColor || '#fff';
+
+        if (node.tagName === 'DIV' && node.innerHTML.includes('input')) {
+          parsedElements.push({
+            id: Date.now() + Math.random(),
+            type: 'checkbox',
+            x,
+            y,
+            width,
+            height,
+            backgroundColor,
+            checked: node.querySelector('input').checked,
+          });
+        } else if (
+          node.tagName === 'DIV' &&
+          node.innerHTML.includes('table') &&
+          !node.innerHTML.includes('contenteditable')
+        ) {
+          console.log('node.innerHTML----->', node.innerHTML);
+          const table = node.querySelector('table');
+          const tableData = Array.from(table.rows).map((row) =>
+            Array.from(row.cells).map((cell) => cell.innerHTML)
+          );
+          parsedElements.push({
+            id: Date.now() + Math.random(),
+            type: 'table',
+            x,
+            y,
+            width,
+            height,
+            backgroundColor,
+            rows: tableData.length,
+            cols: tableData[0]?.length || 0,
+            tableData,
+          });
+        } else {
+          parsedElements.push({
+            id: Date.now() + Math.random(),
+            type: 'text',
+            x,
+            y,
+            width,
+            height,
+            backgroundColor,
+            content: node.innerHTML,
+          });
+        }
+      }
+    });
+
+    setElements(parsedElements);
+  };
+
   return (
     <div style={{ display: "flex", gap: "20px" }}>
       <div
