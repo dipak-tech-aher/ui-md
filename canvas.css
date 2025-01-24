@@ -1,0 +1,16 @@
+
+.rich-text-editor {
+  list-style-position: inside; /* Ensures bullets and numbers align with text */
+}
+
+.rich-text-editor ul {
+  list-style-type: circle;
+  padding-left: 20px;
+  margin-left: 0;
+}
+
+.rich-text-editor ol {
+  list-style-type: decimal;
+  padding-left: 20px;
+  margin-left: 0;
+}
