@@ -365,6 +365,40 @@ const FinalCanvas = () => {
         );
     };
 
+
+      const canvasRef = useRef(null); // Ref for the canvas
+    const handleSelectElement = (e, id) => {
+        const canvasRect = canvasRef.current.getBoundingClientRect();
+        const cursorX = e.clientX - canvasRect.left;
+        const cursorY = e.clientY - canvasRect.top;
+
+        setSelectedElementId(id);
+        setShowToolbar(true);
+        setToolbarPosition({ x: cursorX, y: cursorY });
+    };
+
+    const handleClickOutside = (e) => {
+        if (
+            toolbarRef.current &&
+            !toolbarRef.current.contains(e.target)
+            //  &&
+            // !canvasRef.current.contains(e.target)
+        ) {
+            setShowToolbar(false);
+            setSelectedElementId(null);
+        }
+    };
+
+    useEffect(() => {
+        document.addEventListener("mousedown", handleClickOutside);
+        return () => document.removeEventListener("mousedown", handleClickOutside);
+    }, [selectedElementId]);
+
+
+    
+
+
+    
     return (
         <div style={{ display: "flex", gap: "20px" }}>
             <div
@@ -484,6 +518,25 @@ const FinalCanvas = () => {
                         </div>
                     ))}
                 </div>
+                        {showToolbar && (
+                    <div
+                        ref={toolbarRef}
+                        style={{
+                            position: "absolute",
+                            left: toolbarPosition.x,
+                            top: toolbarPosition.y,
+                            background: "#fff",
+                            border: "1px solid #ccc",
+                            padding: "10px",
+                            zIndex: 1000,
+                            boxShadow: "0px 4px 8px rgba(0, 0, 0, 0.2)",
+                        }}
+                    >
+                        <p>Toolbar</p>
+                        <button>Edit</button>
+                        <button>Delete</button>
+                    </div>
+                )}
             </div>
         </div>
     );
