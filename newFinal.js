@@ -23,12 +23,33 @@ const FinalCanvas = () => {
         setCanvasHeight(newHeight); // Set the canvas height
     };
 
-    const handleDrop = (e) => {
+   const handleDrop = (e) => {
         e.preventDefault();
         const type = e.dataTransfer.getData("type");
         const canvasRect = e.currentTarget.getBoundingClientRect();
         let x = e.clientX - canvasRect.left - dragOffset.x;
         let y = e.clientY - canvasRect.top - dragOffset.y;
+
+        const doesOverlap = (newElement, elements) => {
+            return elements.some((el) => {
+                return (
+                    newElement.x < el.x + el.width &&
+                    newElement.x + newElement.width > el.x &&
+                    newElement.y < el.y + el.height &&
+                    newElement.y + newElement.height > el.y
+                );
+            });
+        };
+
+        const adjustPosition = (newElement, elements) => {
+            let adjustedY = newElement.y;
+
+            while (doesOverlap({ ...newElement, y: adjustedY }, elements)) {
+                adjustedY += newElement.height + 10; // Move below by height + 10px gap
+            }
+
+            return adjustedY;
+        };
 
         if (type) {
             const newElement = {
@@ -46,22 +67,28 @@ const FinalCanvas = () => {
                     .map(() => Array(2).fill("Cell")),
                 label: "Label",
             };
+
+            // Adjust the position to avoid overlap
+            newElement.y = adjustPosition(newElement, elements);
+
             setElements((prev) => {
                 const newElements = [...prev, newElement];
                 setTimeout(() => updateCanvasHeight(), 0); // Recalculate canvas height after state update
                 return newElements;
             });
         } else if (draggingId) {
+            const movedElement = elements.find((el) => el.id === draggingId);
+            const updatedElement = {
+                ...movedElement,
+                x: Math.max(0, Math.min(x, canvasRect.width - movedElement.width)),
+                y: Math.max(0, Math.min(y, canvasRect.height - movedElement.height)),
+            };
+
+            // Adjust the position to avoid overlap
+            updatedElement.y = adjustPosition(updatedElement, elements.filter((el) => el.id !== draggingId));
+
             setElements((prev) =>
-                prev.map((el) =>
-                    el.id === draggingId
-                        ? {
-                            ...el,
-                            x: Math.max(0, Math.min(x, canvasRect.width - el.width)),
-                            y: Math.max(0, Math.min(y, canvasRect.height - el.height)),
-                        }
-                        : el
-                )
+                prev.map((el) => (el.id === draggingId ? updatedElement : el))
             );
             setDraggingId(null);
             setTimeout(updateCanvasHeight, 0); // Update canvas height
@@ -309,6 +336,35 @@ const FinalCanvas = () => {
         setElements(parsedElements);
     };
 
+
+       const moveSelectedElement = (direction) => {
+        setElements((prevElements) =>
+            prevElements.map((el) => {
+                if (el.id === selectedElementId) {
+                    const updatedElement = { ...el };
+                    switch (direction) {
+                        case "up":
+                            updatedElement.y = Math.max(0, el.y - 1); // Prevent moving out of canvas
+                            break;
+                        case "down":
+                            updatedElement.y = el.y + 1;
+                            break;
+                        case "left":
+                            updatedElement.x = Math.max(0, el.x - 1); // Prevent moving out of canvas
+                            break;
+                        case "right":
+                            updatedElement.x = el.x + 1;
+                            break;
+                        default:
+                            break;
+                    }
+                    return updatedElement;
+                }
+                return el;
+            })
+        );
+    };
+
     return (
         <div style={{ display: "flex", gap: "20px" }}>
             <div
@@ -320,6 +376,13 @@ const FinalCanvas = () => {
 
                 {selectedElement ? (
                     <>
+                     <h5>Move Element</h5>
+                        <div style={{ display: "flex", flexWrap: "wrap", gap: "5px" }}>
+                            <button onClick={() => moveSelectedElement("up")}>↑ Up</button>
+                            <button onClick={() => moveSelectedElement("left")}>← Left</button>
+                            <button onClick={() => moveSelectedElement("down")}>↓ Down</button>
+                            <button onClick={() => moveSelectedElement("right")}>→ Right</button>
+                        </div>
                         <label>
                             Width (px):
                             <input
