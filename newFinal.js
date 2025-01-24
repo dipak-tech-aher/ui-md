@@ -151,24 +151,31 @@ const FinalCanvas = () => {
         });
     };
 
-    // Handle when the user finishes editing
-    const handleBlur = (el) => {
-        syncContentToState(el); // Sync content with state on blur
-    };
+      const [isInsertingLabel, setIsInsertingLabel] = useState(false); // Track if a label is being inserted
 
+    const handleBlur = (el) => {
+        if (isInsertingLabel) {
+            // Delay sync to allow label insertion to complete
+            setTimeout(() => {
+                syncContentToState(el);
+                setIsInsertingLabel(false); // Reset the flag
+            }, 0);
+        } else {
+            syncContentToState(el); // Normal sync behavior
+        }
+    };
+    
     const insertLabelAtCursor = (label) => {
         if (cursorRange && selectedElementId) {
+            setIsInsertingLabel(true); // Set the flag when a label is being inserted
+    
             const element = document.querySelector(`[data-id="${selectedElementId}"]`);
             if (element) {
-                // Focus the element before restoring the range
                 element.focus();
-
                 const selection = window.getSelection();
                 selection.removeAllRanges();
                 selection.addRange(cursorRange);
-
-                console.log("Restored range:", cursorRange);
-
+    
                 if (label === "dropdown") {
                     const select = document.createElement("select");
                     ["Option 1", "Option 2", "Option 3"].forEach((optionText) => {
@@ -176,55 +183,43 @@ const FinalCanvas = () => {
                         option.textContent = optionText;
                         select.appendChild(option);
                     });
-
+    
                     const range = selection.getRangeAt(0);
                     range.deleteContents();
                     range.insertNode(select);
-
                     range.setStartAfter(select);
                     range.collapse(true);
-
+    
                     selection.removeAllRanges();
                     selection.addRange(range);
-
-                    const updatedContent = element.innerHTML;
-                    setElements((prevElements) =>
-                        prevElements.map((item) =>
-                            item.id === selectedElementId ? { ...item, content: updatedContent } : item
-                        )
-                    );
-                    setCursorRange(range);
                 } else {
                     const labelNode = document.createTextNode(`{{${label}}}`);
                     const range = selection.getRangeAt(0);
                     range.deleteContents();
                     range.insertNode(labelNode);
-
                     range.setStartAfter(labelNode);
                     range.collapse(true);
-
+    
                     selection.removeAllRanges();
                     selection.addRange(range);
-
-                    const updatedContent = element.innerHTML;
-                    setElements((prevElements) =>
-                        prevElements.map((item) =>
-                            item.id === selectedElementId ? { ...item, content: updatedContent } : item
-                        )
-                    );
-                    setCursorRange(range);
                 }
-            } else {
-                console.error("Element not found for the saved cursor position.");
+    
+                // Update the content state after insertion
+                const updatedContent = element.innerHTML;
+                setElements((prevElements) =>
+                    prevElements.map((item) =>
+                        item.id === selectedElementId ? { ...item, content: updatedContent } : item
+                    )
+                );
+    
+                // Save the new cursor range
+                const newRange = window.getSelection().getRangeAt(0);
+                setCursorRange(newRange);
             }
         } else {
             console.warn("Cursor position is not saved or no element is selected.");
         }
     };
-
-
-
-
 
     const generateHTML = () => {
         const html = elements
