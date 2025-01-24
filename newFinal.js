@@ -117,7 +117,7 @@ const FinalCanvas = () => {
     };
 
 
-    const syncContentToState = (el) => {
+     const syncContentToState = (el) => {
         const element = document.querySelector(`[data-id="${el.id}"]`);
         const content = element ? element.innerHTML : el.content;
         const height = element ? element.scrollHeight : el.height; // Get the scrollHeight of the element
