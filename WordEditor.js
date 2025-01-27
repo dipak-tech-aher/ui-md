@@ -1,24 +1,6 @@
-
-
-table {
-  border-collapse: collapse;
-  width: 100%;
-}
-
-td {
-  border: 1px solid #ccc;
-  padding: 5px;
-  text-align: center;
-}
-
-tbody, td, tfoot, th, thead, tr {
-  border-color: inherit!important;
-  border-style: solid!important;
-  border-width: 1px!important;
-}
-
-
 import React, { useRef, useState, useEffect } from "react";
+import htmlDocx from 'html-docx-js/dist/html-docx'
+import { saveAs } from 'file-saver'
 
 const RichTextEditor = () => {
     const editorRef = useRef(null);
@@ -165,6 +147,11 @@ const RichTextEditor = () => {
     const handleGenerateHTML = () => {
         setHtmlContent(editorRef.current.innerHTML); // Save HTML to state
         console.log("Generated HTML:", editorRef.current.innerHTML); // Log the generated HTML
+        const docx = htmlDocx.asBlob(editorRef.current.innerHTML,{
+            orientation:'landscape'
+        });
+        saveAs(docx,'edited.docx')
+
     };
 
     const handleLoadHTML = () => {
@@ -223,23 +210,6 @@ const RichTextEditor = () => {
         document.execCommand("insertHTML", false, checkboxHtml);
     };
 
-    const handlePaste = (event) => {
-        event.preventDefault();
-    
-        const clipboardData = event.clipboardData || window.clipboardData;
-        const pastedData = clipboardData.getData("text/html") || clipboardData.getData("text/plain");
-    
-        // Create a temporary container to filter pasted content
-        const tempDiv = document.createElement("div");
-        tempDiv.innerHTML = pastedData;
-    
-        // Optional: Clean up Word-specific styles (like classes and inline styles)
-        const cleanedContent = tempDiv.textContent || tempDiv.innerText;
-    
-        // Insert cleaned content
-        document.execCommand("insertHTML", false, cleanedContent);
-    };
-    
 
     return (
         <div className="rich-text-editor">
@@ -355,17 +325,12 @@ const RichTextEditor = () => {
                 className="editor"
                 contentEditable
                 onInput={handleInput}
-                onPaste={handlePaste}
                 style={{
                     border: "1px solid #ccc",
                     padding: "10px",
                     minHeight: "200px",
                     borderRadius: "4px",
                     fontFamily: "Arial, sans-serif",
-                    boxSizing: "border-box",
-                    wordWrap: "break-word",
-                    overflowWrap: "break-word",
-                    whiteSpace: "pre-wrap",
                 }}
             >
                 <p>Edit this text...</p>
