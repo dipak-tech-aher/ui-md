@@ -1,3 +1,23 @@
+
+
+table {
+  border-collapse: collapse;
+  width: 100%;
+}
+
+td {
+  border: 1px solid #ccc;
+  padding: 5px;
+  text-align: center;
+}
+
+tbody, td, tfoot, th, thead, tr {
+  border-color: inherit!important;
+  border-style: solid!important;
+  border-width: 1px!important;
+}
+
+
 import React, { useRef, useState, useEffect } from "react";
 
 const RichTextEditor = () => {
