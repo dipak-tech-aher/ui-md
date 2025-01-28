@@ -8,7 +8,37 @@ const RichTextEditor = () => {
     const [fontColor, setFontColor] = useState("#000000"); // Default font color
     const [fontSize, setFontSize] = useState("16px"); // Default font size
     const [htmlContent, setHtmlContent] = useState(""); // State to store generated HTML
+    const [selectedCell, setSelectedCell] = useState(null);
 
+     useEffect(() => {
+        const editor = editorRef.current;
+
+        const handleClick = (event) => {
+            handleCellClick(event);
+        };
+
+        if (editor) {
+            editor.addEventListener("click", handleClick);
+        }
+
+        return () => {
+            if (editor) {
+                editor.removeEventListener("click", handleClick);
+            }
+        };
+    }, []);
+
+
+    const handleCellClick = (event) => {
+        const cell = event.target.closest("td"); // Ensure the click is inside a table cell
+        if (cell) {
+            setSelectedCell(cell); // Save the selected cell
+        } else {
+            setSelectedCell(null); // Deselect if clicked outside a cell
+        }
+    };
+
+    
     const formatText = (command, value = null) => {
         document.execCommand(command, false, value);
     };
