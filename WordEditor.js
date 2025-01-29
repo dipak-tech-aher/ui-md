@@ -10,6 +10,46 @@ const RichTextEditor = () => {
     const [htmlContent, setHtmlContent] = useState(""); // State to store generated HTML
     const [selectedCell, setSelectedCell] = useState(null);
 
+     const insertTextBox = () => {
+        if (!editorRef.current) return;
+    
+        const selection = window.getSelection();
+        const range = selection.rangeCount > 0 ? selection.getRangeAt(0) : null;
+    
+        // Check if cursor is inside the editor
+        if (!range || !editorRef.current.contains(selection.anchorNode)) {
+            alert("Please place the cursor inside the editor before inserting a text box.");
+            return;
+        }
+    
+        // Create a new div for the text box
+        const textBox = document.createElement("div");
+        textBox.contentEditable = "true";
+        textBox.style.border = "1px solid #ccc";
+        textBox.style.padding = "10px";
+        textBox.style.minHeight = "50px";
+        textBox.style.marginBottom = "10px";
+        textBox.style.backgroundColor = backgroundColor;
+        textBox.innerHTML = "Edit this text...";
+    
+        // Insert the text box at the current cursor position
+        range.deleteContents();
+        range.insertNode(textBox);
+    
+        // Create an empty <br> after the textbox to allow typing after it
+        const br = document.createElement("br");
+        range.insertNode(br);
+    
+        // Move the cursor after the inserted text box
+        range.setStartAfter(br);
+        range.setEndAfter(br);
+        selection.removeAllRanges();
+        selection.addRange(range);
+    
+        saveHistory();
+    };
+
+    
     const insertDropdown = () => {
         if (!editorRef.current) return;
     
