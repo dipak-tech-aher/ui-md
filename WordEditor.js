@@ -10,6 +10,57 @@ const RichTextEditor = () => {
     const [htmlContent, setHtmlContent] = useState(""); // State to store generated HTML
     const [selectedCell, setSelectedCell] = useState(null);
 
+    const insertDropdown = () => {
+        if (!editorRef.current) return;
+    
+        const selection = window.getSelection();
+        const range = selection.rangeCount > 0 ? selection.getRangeAt(0) : null;
+    
+        // Check if cursor is inside the editor
+        if (!range || !editorRef.current.contains(selection.anchorNode)) {
+            alert("Please place the cursor inside the editor before inserting a dropdown.");
+            return;
+        }
+    
+        const dropdownHtml = `
+          <select style="padding: 5px; font-size: 14px;">
+            ${dropdownOptions.map(option => `<option value="${option}">${option}</option>`).join('')}
+          </select>
+        `;
+    
+        document.execCommand("insertHTML", false, dropdownHtml);
+        saveHistory();
+    };
+    
+
+    const insertVariable = (text) => {
+        if (!editorRef.current) return;
+    
+        const selection = window.getSelection();
+        const range = selection.rangeCount > 0 ? selection.getRangeAt(0) : null;
+    
+        // Check if cursor is inside the editor
+        if (!range || !editorRef.current.contains(selection.anchorNode)) {
+            alert("Please place the cursor inside the editor before inserting a variable.");
+            return;
+        }
+    
+        range.deleteContents();
+        const span = document.createElement("span");
+        span.textContent = `{{${text}}}`;
+        span.style.fontWeight = "bold";
+        range.insertNode(span);
+    
+        // Move cursor after the inserted variable
+        range.setStartAfter(span);
+        range.setEndAfter(span);
+        selection.removeAllRanges();
+        selection.addRange(range);
+    
+        saveHistory();
+    };
+    
+    
 const [history, setHistory] = useState([]); // Stack to track changes
     const [redoStack, setRedoStack] = useState([]);
 
