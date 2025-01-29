@@ -10,6 +10,57 @@ const RichTextEditor = () => {
     const [htmlContent, setHtmlContent] = useState(""); // State to store generated HTML
     const [selectedCell, setSelectedCell] = useState(null);
 
+const [history, setHistory] = useState([]); // Stack to track changes
+    const [redoStack, setRedoStack] = useState([]);
+
+    // Save full editor state, including styles
+    const saveHistory = () => {
+        if (editorRef.current) {
+            const snapshot = editorRef.current.cloneNode(true);
+            setHistory((prev) => [...prev, snapshot]);
+            setRedoStack([]); // Clear redo stack on new input
+        }
+    };
+
+    // Undo function
+    const handleUndo = () => {
+        if (history.length > 0) {
+            const lastState = history[history.length - 1]; // Get last saved state
+            setRedoStack((prev) => [editorRef.current.cloneNode(true), ...prev]); // Save current state to redo stack
+            setHistory((prev) => prev.slice(0, -1)); // Remove last state from history
+            editorRef.current.replaceWith(lastState); // Restore editor content
+            editorRef.current = lastState; // Update ref
+        }
+    };
+
+    // Redo function
+    const handleRedo = () => {
+        if (redoStack.length > 0) {
+            const nextState = redoStack[0]; // Get latest redo state
+            setHistory((prev) => [...prev, editorRef.current.cloneNode(true)]); // Save current state to history
+            setRedoStack((prev) => prev.slice(1)); // Remove restored state from redo stack
+            editorRef.current.replaceWith(nextState); // Restore editor content
+            editorRef.current = nextState; // Update ref
+        }
+    };
+
+    // Handle background color change and save to history
+    const handleBackgroundColorChange = (event) => {
+        const color = event.target.value;
+        setBackgroundColor(color);
+
+        const selection = window.getSelection();
+        const anchorNode = selection.anchorNode;
+        const element = anchorNode && anchorNode.nodeType === 3 ? anchorNode.parentElement : anchorNode;
+
+        if (element) {
+            element.style.backgroundColor = color;
+            saveHistory(); // Save change to history
+        }
+    };
+
+
+
      useEffect(() => {
         const editor = editorRef.current;
 
