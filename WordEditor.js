@@ -10,6 +10,100 @@ const RichTextEditor = () => {
     const [htmlContent, setHtmlContent] = useState(""); // State to store generated HTML
     const [selectedCell, setSelectedCell] = useState(null);
 
+
+    
+    const handleImageUpload = (event) => {
+        const file = event.target.files[0];
+        if (file) {
+            const reader = new FileReader();
+            reader.onload = (e) => {
+                insertImage(e.target.result);
+            };
+            reader.readAsDataURL(file);
+        }
+    };
+
+    const insertImage = (src) => {
+        if (!editorRef.current) return;
+
+        const selection = window.getSelection();
+        const range = selection.rangeCount > 0 ? selection.getRangeAt(0) : null;
+
+        if (!range || !editorRef.current.contains(selection.anchorNode)) {
+            alert("Please place the cursor inside the editor before inserting an image.");
+            return;
+        }
+
+        const wrapper = document.createElement("div");
+        wrapper.className = "resizable";
+        wrapper.style.position = "relative";
+        wrapper.style.display = "inline-block";
+
+        const img = document.createElement("img");
+        img.src = src;
+        img.style.width = "200px"; // Default width
+        img.style.height = "auto";
+        img.style.display = "block";
+
+        // Add corner resize handles
+        ["top-left", "top-right", "bottom-left", "bottom-right"].forEach((corner) => {
+            const handle = document.createElement("div");
+            handle.className = `resize-handle ${corner}`;
+            handle.style.position = "absolute";
+            handle.style.width = "10px";
+            handle.style.height = "10px";
+            handle.style.background = "red";
+            handle.style.cursor = `${corner}-resize`;
+
+            if (corner.includes("top")) handle.style.top = "-5px";
+            if (corner.includes("bottom")) handle.style.bottom = "-5px";
+            if (corner.includes("left")) handle.style.left = "-5px";
+            if (corner.includes("right")) handle.style.right = "-5px";
+
+            handle.onmousedown = (e) => startResize(e, img, corner);
+            wrapper.appendChild(handle);
+        });
+
+        wrapper.appendChild(img);
+        range.deleteContents();
+        range.insertNode(wrapper);
+    };
+
+    const startResize = (e, img, corner) => {
+        e.preventDefault();
+        const startX = e.clientX;
+        const startY = e.clientY;
+        const startWidth = img.offsetWidth;
+        const startHeight = img.offsetHeight;
+
+        const doResize = (moveEvent) => {
+            const diffX = moveEvent.clientX - startX;
+            const diffY = moveEvent.clientY - startY;
+
+            if (corner.includes("right")) img.style.width = `${startWidth + diffX}px`;
+            if (corner.includes("left")) img.style.width = `${startWidth - diffX}px`;
+            if (corner.includes("bottom")) img.style.height = `${startHeight + diffY}px`;
+            if (corner.includes("top")) img.style.height = `${startHeight - diffY}px`;
+        };
+
+        const stopResize = () => {
+            document.removeEventListener("mousemove", doResize);
+            document.removeEventListener("mouseup", stopResize);
+        };
+
+        document.addEventListener("mousemove", doResize);
+        document.addEventListener("mouseup", stopResize);
+    };
+
+    <input
+                    type="file"
+                    accept="image/*"
+                    onChange={(e)=>handleImageUpload(e)}
+                    title="Insert Image"
+                />
+
+
+    
      const insertTextBox = () => {
         if (!editorRef.current) return;
     
